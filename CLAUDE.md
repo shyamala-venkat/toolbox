@@ -47,6 +47,40 @@ Every tool loads in under 100ms. The app should feel like a native system utilit
 ### 5. Simple
 The app should be immediately obvious to use. Paste input, get output. No tutorials needed. No config required. Every tool follows the same visual pattern so once you've used one, you've used them all.
 
+### 6. Best-in-Class Implementations — This Is What Customers Pay For
+
+**Every tool must use the best available open-source library or algorithm for its core operation. No mediocre defaults. No "it technically works." Professional-grade output is the entire value proposition.**
+
+This is non-negotiable because:
+- Users compare our output against the best free web tools (SmallPDF, TinyPNG, Squoosh)
+- If our JPEG compression produces LARGER files than the input, users uninstall and never come back
+- "Works but poorly" is worse than "not built yet" — it actively damages trust and kills conversions
+- Users are paying $4/month or $30 lifetime. They expect output quality that matches or beats the tools they're replacing
+
+**The rule**: Before implementing ANY tool that processes files or data, research what the gold-standard implementation is. Don't use the first library that compiles — find the one that professionals use. Then verify the output quality against real-world inputs.
+
+**Examples of this principle in action:**
+
+| Operation | Mediocre choice | Best-in-class choice | Why it matters |
+|---|---|---|---|
+| JPEG compression | `image` crate's built-in `JpegEncoder` | **`mozjpeg`** (Apache 2.0) — optimal Huffman coding + trellis quantization | Basic encoder produced LARGER files than input. mozjpeg produces 10-30% smaller files at same visual quality. |
+| PNG optimization | Re-save with `image` crate | **`oxipng`** (MIT) — multi-threaded, lossless recompression | oxipng applies zopfli/zlib-ng compression that the basic encoder doesn't. |
+| PDF compression | `pdf-lib` save with `useObjectStreams` | **`qpdf`** (Apache 2.0) sidecar — stream optimization + image recompression | pdf-lib's "optimization" is modest (10-30%). qpdf can achieve 50-70% on image-heavy PDFs. |
+| SQL formatting | Random npm formatter | **`sql-formatter`** (MIT) — 8 dialect support, used by major IDEs | Cheap formatters break on dialect-specific syntax (MySQL vs PostgreSQL vs T-SQL). |
+| Text diffing | Naive line-by-line comparison | **`diff`** library (BSD) — Myers algorithm, word-level and char-level | Naive diff produces unreadable results on reordered text. Myers is the gold standard (used by git). |
+| Regex execution | Run on main thread | **Web Worker with 5s timeout** — same pattern as VS Code | Running user regex on the main thread lets catastrophic backtracking freeze the entire app. |
+| YAML parsing | `js-yaml` with default schema | **`js-yaml` with `JSON_SCHEMA`** explicitly | Default schema enables `<<` merge keys that allow prototype pollution (CVE). |
+
+**Process for every new tool:**
+1. Research what tool/library the industry considers best-in-class for this operation
+2. Check its license (must be MIT, Apache 2.0, BSD, or ISC for commercial use)
+3. If it's a C/C++ library, check if there's a quality Rust wrapper or if we need a sidecar
+4. Build the tool with that library
+5. Test the output against a competing product (SmallPDF, TinyPNG, etc.) — our output should be comparable or better
+6. If the best library is GPL/AGPL, find the next-best permissively-licensed alternative and document the trade-off
+
+**When in doubt**: Ask "would a professional photographer / accountant / content creator be satisfied with this output?" If the answer is "it's okay but not great," find a better library.
+
 ---
 
 ## Tech Stack

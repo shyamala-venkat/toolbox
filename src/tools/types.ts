@@ -8,7 +8,11 @@ export type ToolCategory =
   | 'text'
   | 'media'
   | 'network'
-  | 'crypto';
+  | 'crypto'
+  | 'pdf-tools'
+  | 'image-tools'
+  | 'file-tools'
+  | 'calculators';
 
 export interface ClipboardDetection {
   patterns: RegExp[];

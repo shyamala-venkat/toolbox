@@ -95,3 +95,46 @@ export const getPreferences = (): Promise<RustUserPreferences> =>
 
 export const setPreferences = (prefs: RustUserPreferences): Promise<void> =>
   invoke<void>('set_preferences', { prefs });
+
+// ── Image operations ────────────────────────────────────────────────────────
+
+export interface ImageInfo {
+  width: number;
+  height: number;
+  format: string;
+  size_bytes: number;
+}
+
+export const getImageInfo = (path: string): Promise<ImageInfo> =>
+  invoke<ImageInfo>('get_image_info', { path });
+
+export const resizeImage = (
+  inputPath: string,
+  outputPath: string,
+  width: number,
+  height: number,
+  maintainAspect: boolean,
+): Promise<ImageInfo> =>
+  invoke<ImageInfo>('resize_image', {
+    inputPath,
+    outputPath,
+    width,
+    height,
+    maintainAspect,
+  });
+
+export const convertImage = (
+  inputPath: string,
+  outputPath: string,
+  quality?: number,
+): Promise<ImageInfo> =>
+  invoke<ImageInfo>('convert_image', { inputPath, outputPath, quality });
+
+export const stripExif = (
+  inputPath: string,
+  outputPath: string,
+): Promise<ImageInfo> =>
+  invoke<ImageInfo>('strip_exif', { inputPath, outputPath });
+
+export const readExif = (path: string): Promise<[string, string][]> =>
+  invoke<[string, string][]>('read_exif', { path });

@@ -22,6 +22,21 @@ const PasswordGen = lazy(() => import('./password-gen/PasswordGen'));
 const QrCode = lazy(() => import('./qr-code/QrCode'));
 const TextDiff = lazy(() => import('./text-diff/TextDiff'));
 const RegexTester = lazy(() => import('./regex-tester/RegexTester'));
+const PdfMerge = lazy(() => import('./pdf-merge/PdfMerge'));
+const PdfSplit = lazy(() => import('./pdf-split/PdfSplit'));
+const PdfCompress = lazy(() => import('./pdf-compress/PdfCompress'));
+const PdfToImage = lazy(() => import('./pdf-to-image/PdfToImage'));
+const PdfPages = lazy(() => import('./pdf-pages/PdfPages'));
+const ImageResize = lazy(() => import('./image-resize/ImageResize'));
+const ImageCompress = lazy(() => import('./image-compress/ImageCompress'));
+const ImageConvert = lazy(() => import('./image-convert/ImageConvert'));
+const ExifStrip = lazy(() => import('./exif-strip/ExifStrip'));
+const ImageBatch = lazy(() => import('./image-batch/ImageBatch'));
+const WordCounter = lazy(() => import('./word-counter/WordCounter'));
+const TextCleanup = lazy(() => import('./text-cleanup/TextCleanup'));
+const UnitConverter = lazy(() => import('./unit-converter/UnitConverter'));
+const DateCalculator = lazy(() => import('./date-calculator/DateCalculator'));
+const CsvViewer = lazy(() => import('./csv-viewer/CsvViewer'));
 // === TOOL_IMPORTS_END ===
 
 export const toolRegistry: ToolDefinition[] = [
@@ -333,6 +348,228 @@ export const toolRegistry: ToolDefinition[] = [
     tier: 'pro',
     requiresBackend: false,
     component: RegexTester,
+  },
+  // --- PDF Tools ---
+  {
+    id: 'pdf-merge',
+    name: 'PDF Merge',
+    description: 'Combine multiple PDFs into a single document',
+    longDescription:
+      'Drag-and-drop or select multiple PDF files, reorder them as needed, ' +
+      'and merge into one PDF. Runs entirely in your browser — nothing leaves your machine.',
+    category: 'pdf-tools',
+    tags: ['pdf', 'merge', 'combine', 'join', 'concatenate'],
+    icon: 'file-plus-2',
+    tier: 'free',
+    requiresBackend: false,
+    component: PdfMerge,
+  },
+  {
+    id: 'pdf-split',
+    name: 'PDF Split',
+    description: 'Split a PDF into multiple files by page range',
+    longDescription:
+      'Upload a PDF, choose page ranges or split every N pages, and download ' +
+      'the result. Multiple outputs are bundled into a ZIP. Runs entirely in your browser.',
+    category: 'pdf-tools',
+    tags: ['pdf', 'split', 'extract', 'pages', 'range', 'separate'],
+    icon: 'scissors',
+    tier: 'pro',
+    requiresBackend: false,
+    component: PdfSplit,
+  },
+  {
+    id: 'pdf-compress',
+    name: 'PDF Compress',
+    description: 'Optimize PDF file size with object stream compression',
+    longDescription:
+      'Upload a PDF and re-encode it with object streams enabled. Typically reduces file ' +
+      'size by 10-30%. For maximum compression, use a dedicated PDF compressor. ' +
+      'Runs entirely in your browser — nothing leaves your machine.',
+    category: 'pdf-tools',
+    tags: ['pdf', 'compress', 'optimize', 'reduce', 'size', 'shrink'],
+    icon: 'file-minus-2',
+    tier: 'pro',
+    requiresBackend: false,
+    component: PdfCompress,
+  },
+  {
+    id: 'pdf-to-image',
+    name: 'PDF to Image',
+    description: 'Convert PDF pages to PNG or JPG images',
+    longDescription:
+      'Upload a PDF, choose the output format (PNG or JPG), scale, and page range, ' +
+      'then preview and download images. Multiple pages are bundled into a ZIP. ' +
+      'Runs entirely in your browser — nothing leaves your machine.',
+    category: 'pdf-tools',
+    tags: ['pdf', 'image', 'png', 'jpg', 'convert', 'export', 'screenshot'],
+    icon: 'image',
+    tier: 'pro',
+    requiresBackend: false,
+    component: PdfToImage,
+  },
+  {
+    id: 'pdf-pages',
+    name: 'PDF Page Manager',
+    description: 'Rotate, delete, and reorder PDF pages visually',
+    longDescription:
+      'Upload a PDF and see page thumbnails. Select pages to rotate, delete, or drag to ' +
+      'reorder, then save the modified PDF. Runs entirely in your browser — nothing leaves your machine.',
+    category: 'pdf-tools',
+    tags: ['pdf', 'pages', 'rotate', 'delete', 'reorder', 'rearrange', 'manage'],
+    icon: 'layout-grid',
+    tier: 'pro',
+    requiresBackend: false,
+    component: PdfPages,
+  },
+  // --- Image Tools ---
+  {
+    id: 'image-resize',
+    name: 'Image Resize',
+    description: 'Resize images by dimensions or percentage with aspect ratio lock',
+    longDescription:
+      'Resize any image to custom dimensions or a preset percentage. Maintains aspect ratio ' +
+      'by default and supports PNG, JPEG, WebP, BMP, GIF, TIFF, and ICO. All processing ' +
+      'happens locally via the Rust backend — nothing leaves your machine.',
+    category: 'image-tools',
+    tags: ['image', 'resize', 'dimensions', 'scale', 'width', 'height', 'aspect-ratio'],
+    icon: 'minimize-2',
+    tier: 'free',
+    requiresBackend: true,
+    component: ImageResize,
+  },
+  {
+    id: 'image-compress',
+    name: 'Image Compress',
+    description: 'Compress images to reduce file size with adjustable quality',
+    longDescription:
+      'Reduce image file size with a quality slider for JPEG and WebP. PNG files are ' +
+      're-saved losslessly. Shows before/after size comparison with savings percentage. ' +
+      'All processing runs locally via the Rust backend.',
+    category: 'image-tools',
+    tags: ['image', 'compress', 'optimize', 'quality', 'reduce', 'file-size'],
+    icon: 'file-down',
+    tier: 'free',
+    requiresBackend: true,
+    component: ImageCompress,
+  },
+  {
+    id: 'image-convert',
+    name: 'Image Format Convert',
+    description: 'Convert images between PNG, JPEG, WebP, BMP, GIF, TIFF, and ICO',
+    longDescription:
+      'Convert images between all major formats with optional quality control for ' +
+      'lossy formats. Supports PNG, JPEG, WebP, BMP, GIF, TIFF, and ICO. ' +
+      'HEIC/AVIF support is planned for a future update. All processing runs locally.',
+    category: 'image-tools',
+    tags: ['image', 'convert', 'format', 'png', 'jpeg', 'webp', 'bmp', 'gif', 'tiff', 'ico'],
+    icon: 'repeat',
+    tier: 'free',
+    requiresBackend: true,
+    component: ImageConvert,
+  },
+  {
+    id: 'exif-strip',
+    name: 'EXIF Metadata Strip',
+    description: 'View and strip EXIF metadata from images for privacy',
+    longDescription:
+      'Read EXIF metadata from images, highlighting sensitive fields like GPS ' +
+      'coordinates and timestamps. Strip all metadata with a single click for privacy. ' +
+      'Shows before/after size comparison. All processing runs locally.',
+    category: 'image-tools',
+    tags: ['exif', 'metadata', 'strip', 'privacy', 'gps', 'location', 'image'],
+    icon: 'scan',
+    tier: 'pro',
+    requiresBackend: true,
+    component: ExifStrip,
+  },
+  {
+    id: 'image-batch',
+    name: 'Image Batch Processor',
+    description: 'Apply resize, compress, convert, or strip EXIF to multiple images at once',
+    longDescription:
+      'Process multiple images in bulk with a single operation. Choose from resize, compress, ' +
+      'convert format, or strip EXIF metadata. Per-file progress tracking with error resilience ' +
+      '— failed files are skipped and reported at the end. All processing runs locally.',
+    category: 'image-tools',
+    tags: ['image', 'batch', 'bulk', 'resize', 'compress', 'convert', 'exif', 'multiple'],
+    icon: 'images',
+    tier: 'pro',
+    requiresBackend: true,
+    component: ImageBatch,
+  },
+  // --- Writing & Text ---
+  {
+    id: 'word-counter',
+    name: 'Word & Character Counter',
+    description: 'Count words, characters, sentences, paragraphs, and estimate reading time',
+    longDescription:
+      'Paste or type any text to get real-time statistics: words, characters (with and without spaces), ' +
+      'sentences, paragraphs, lines, estimated reading time, and speaking time. Everything runs locally.',
+    category: 'text',
+    tags: ['word', 'count', 'character', 'sentence', 'paragraph', 'reading time', 'speaking time'],
+    icon: 'pilcrow',
+    tier: 'free',
+    requiresBackend: false,
+    component: WordCounter,
+  },
+  {
+    id: 'text-cleanup',
+    name: 'Text Cleanup',
+    description: 'Trim whitespace, remove empty lines, strip HTML tags, and more',
+    longDescription:
+      'Clean up messy text pasted from emails, PDFs, or web pages. Toggle operations like trimming, ' +
+      'deduplication, sorting, HTML stripping, and extra-space removal. All processing runs locally.',
+    category: 'text',
+    tags: ['cleanup', 'trim', 'whitespace', 'duplicate', 'sort', 'html', 'strip'],
+    icon: 'eraser',
+    tier: 'free',
+    requiresBackend: false,
+    component: TextCleanup,
+  },
+  // --- Calculators ---
+  {
+    id: 'unit-converter',
+    name: 'Unit Converter',
+    description: 'Convert between length, weight, temperature, volume, speed, and more',
+    longDescription:
+      'Convert units across 10 categories: length, weight, temperature, volume, speed, data size, ' +
+      'area, time, pressure, and energy. Live conversion as you type with formula display.',
+    category: 'calculators',
+    tags: ['unit', 'convert', 'length', 'weight', 'temperature', 'volume', 'speed', 'metric', 'imperial'],
+    icon: 'ruler',
+    tier: 'free',
+    requiresBackend: false,
+    component: UnitConverter,
+  },
+  {
+    id: 'date-calculator',
+    name: 'Date Calculator',
+    description: 'Calculate differences between dates or add/subtract days, weeks, months, and years',
+    longDescription:
+      'Two modes: find the difference between two dates (including business days), or add/subtract a ' +
+      'duration from a date. Shows day of week, ISO week number, and detailed breakdowns.',
+    category: 'calculators',
+    tags: ['date', 'difference', 'add', 'subtract', 'business days', 'weekday', 'duration'],
+    icon: 'calendar',
+    tier: 'free',
+    requiresBackend: false,
+    component: DateCalculator,
+  },
+  // --- File Tools ---
+  {
+    id: 'csv-viewer',
+    name: 'CSV Viewer & Editor',
+    description: 'View, sort, filter, edit, and export CSV files',
+    longDescription:
+      'Drop a CSV file or paste CSV text to view it as a sortable, filterable table. Edit cells in-place ' +
+      'and export the result. Uses PapaParse for robust parsing with delimiter auto-detection.',
+    category: 'file-tools',
+    tags: ['csv', 'spreadsheet', 'table', 'editor', 'sort', 'filter', 'export'],
+    icon: 'file-spreadsheet',
+    tier: 'pro',
+    requiresBackend: false,
+    component: CsvViewer,
   },
   // === TOOL_REGISTRATIONS_END ===
 ];

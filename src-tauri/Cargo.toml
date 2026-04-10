@@ -34,6 +34,13 @@ crc32fast = "1.4.2"
 anyhow = "1.0.95"
 thiserror = "2.0.9"
 
+# Image processing (all MIT or Apache 2.0 — safe for commercial use)
+image = "0.25.5"
+fast_image_resize = "5.1.0"
+oxipng = "9.1.3"
+kamadak-exif = "0.5.5"
+mozjpeg = "0.10.10"
+
 [features]
 # this feature is used for production builds or when `devUrl` points to a remote server
 custom-protocol = ["tauri/custom-protocol"]

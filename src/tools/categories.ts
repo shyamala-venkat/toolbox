@@ -14,40 +14,73 @@ export interface ToolCategoryMeta {
 }
 
 export const TOOL_CATEGORIES: ToolCategoryMeta[] = [
+  // --- New non-technical categories (show first for broader audience) ---
   {
-    id: 'encoders-decoders',
-    label: 'Encoders & Decoders',
-    description: 'Base64, URL, HTML, JWT, hex — encode and decode with a click.',
-    icon: 'binary',
+    id: 'pdf-tools',
+    label: 'PDF Tools',
+    description: 'Merge, split, compress, and convert PDFs — all offline.',
+    icon: 'file-text',
   },
   {
-    id: 'formatters',
-    label: 'Formatters',
-    description: 'Pretty-print and lint JSON, YAML, SQL, and more.',
-    icon: 'braces',
+    id: 'image-tools',
+    label: 'Image Tools',
+    description: 'Resize, compress, convert, and clean up images.',
+    icon: 'image',
+  },
+  {
+    id: 'file-tools',
+    label: 'File Tools',
+    description: 'Convert, compress, and manage files — CSV, ZIP, DOCX.',
+    icon: 'folder',
+  },
+  {
+    id: 'calculators',
+    label: 'Calculators',
+    description: 'Units, dates, and everyday number crunching.',
+    icon: 'calculator',
+  },
+  // --- Renamed existing categories (friendlier labels) ---
+  {
+    id: 'text',
+    label: 'Writing & Text',
+    description: 'Word count, diff, cleanup, regex — everyday text utilities.',
+    icon: 'type',
   },
   {
     id: 'generators',
     label: 'Generators',
-    description: 'UUIDs, passwords, lorem ipsum, and other scaffolding values.',
+    description: 'Passwords, QR codes, UUIDs, lorem ipsum, and more.',
     icon: 'sparkles',
   },
   {
-    id: 'converters',
-    label: 'Converters',
-    description: 'Case, units, timestamps, color spaces — transform values.',
-    icon: 'shuffle',
+    id: 'crypto',
+    label: 'Security & Hashing',
+    description: 'Hashes, checksums, and verification tools.',
+    icon: 'shield',
   },
   {
-    id: 'text',
-    label: 'Text',
-    description: 'Diff, search, word count, regex — everyday text utilities.',
-    icon: 'type',
+    id: 'encoders-decoders',
+    label: 'Text Converters',
+    description: 'Base64, URL, HTML entities, JWT, GZip — encode and decode.',
+    icon: 'binary',
   },
+  {
+    id: 'formatters',
+    label: 'Data Formatters',
+    description: 'Pretty-print and validate JSON, SQL, XML, and YAML.',
+    icon: 'braces',
+  },
+  {
+    id: 'converters',
+    label: 'Data Tools',
+    description: 'Color spaces, number bases, timestamps — transform values.',
+    icon: 'shuffle',
+  },
+  // --- Kept for future use (no tools yet) ---
   {
     id: 'media',
     label: 'Media',
-    description: 'Image, audio, and video helpers.',
+    description: 'Audio and video helpers.',
     icon: 'image',
   },
   {
@@ -55,12 +88,6 @@ export const TOOL_CATEGORIES: ToolCategoryMeta[] = [
     label: 'Network',
     description: 'IP, DNS, HTTP, and other network diagnostics.',
     icon: 'globe',
-  },
-  {
-    id: 'crypto',
-    label: 'Crypto',
-    description: 'Hashes, HMAC, RSA, and signing utilities.',
-    icon: 'shield',
   },
 ];
 

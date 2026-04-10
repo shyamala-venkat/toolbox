@@ -13,6 +13,7 @@ pub mod storage;
 use commands::{
     crypto::{hash_file, hash_text},
     file_ops::{read_text_file, stat_file, write_text_file},
+    image_ops::{convert_image, get_image_info, read_exif, resize_image, strip_exif},
     keychain::{delete_api_key, get_api_key, get_api_key_summary, store_api_key},
     preferences::{get_preferences, set_preferences},
     system::{get_app_version, get_arch, get_platform},
@@ -95,6 +96,12 @@ pub fn run() {
             // crypto
             hash_file,
             hash_text,
+            // image
+            get_image_info,
+            resize_image,
+            convert_image,
+            strip_exif,
+            read_exif,
             // preferences
             get_preferences,
             set_preferences,
