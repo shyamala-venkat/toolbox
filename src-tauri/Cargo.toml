@@ -1,0 +1,46 @@
+[package]
+name = "toolbox"
+version = "0.1.0"
+description = "ToolBox — local-first developer utilities"
+authors = ["ToolBox Contributors"]
+edition = "2021"
+rust-version = "1.77"
+
+[lib]
+name = "toolbox_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0.4", features = [] }
+
+[dependencies]
+tauri = { version = "2.1.1", features = [] }
+tauri-plugin-clipboard-manager = "2.2.1"
+tauri-plugin-dialog = "2.2.0"
+tauri-plugin-fs = "2.2.0"
+tauri-plugin-os = "2.2.0"
+
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.135"
+tokio = { version = "1.43.0", features = ["rt-multi-thread", "fs", "io-util", "sync", "macros"] }
+
+keyring = "3.6.1"
+
+sha2 = "0.10.8"
+md-5 = "0.10.6"
+sha1 = "0.10.6"
+crc32fast = "1.4.2"
+
+anyhow = "1.0.95"
+thiserror = "2.0.9"
+
+[features]
+# this feature is used for production builds or when `devUrl` points to a remote server
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

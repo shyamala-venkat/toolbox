@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@import "./themes.css";
+@import "./animations.css";
+
+:root {
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    "Helvetica Neue",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+.mono,
+code,
+pre,
+kbd,
+samp {
+  font-family:
+    "JetBrains Mono",
+    "SF Mono",
+    "Menlo",
+    "Monaco",
+    "Consolas",
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+  font-feature-settings:
+    "liga" 0,
+    "calt" 0;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+::selection {
+  background-color: var(--accent);
+  color: var(--accent-contrast);
+}
+
+/* ─── Button hover states ───────────────────────────────────────────────── */
+/* Inline variant styles set the base; these rules handle pointer states so
+   the hover color can reference a CSS variable without duplicating tokens. */
+
+.tb-btn--primary:not(:disabled):hover {
+  background-color: var(--accent-hover) !important;
+  border-color: var(--accent-hover) !important;
+}
+.tb-btn--primary:not(:disabled):active {
+  background-color: var(--accent-active) !important;
+  border-color: var(--accent-active) !important;
+}
+.tb-btn--secondary:not(:disabled):hover {
+  background-color: var(--bg-tertiary) !important;
+}
+.tb-btn--secondary:not(:disabled):active {
+  background-color: var(--bg-tertiary) !important;
+  border-color: var(--border-strong) !important;
+}
+.tb-btn--ghost:not(:disabled):hover {
+  background-color: var(--bg-secondary) !important;
+}
+.tb-btn--ghost:not(:disabled):active {
+  background-color: var(--bg-tertiary) !important;
+}
+.tb-btn--danger:not(:disabled):hover {
+  filter: brightness(0.95);
+}
+.tb-btn--danger:not(:disabled):active {
+  filter: brightness(0.9);
+}
+
+/* ─── Sidebar nav item hover states ─────────────────────────────────────── */
+
+.tb-nav-item:hover {
+  background-color: var(--sidebar-bg-hover);
+}
+.tb-nav-item[data-active="true"] {
+  background-color: var(--sidebar-bg-active);
+  color: var(--sidebar-text-active);
+}
+.tb-nav-item[data-active="true"]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background-color: var(--accent);
+}
+
+/* ─── Toggle switch ─────────────────────────────────────────────────────── */
+
+.tb-toggle-track {
+  background-color: var(--border-strong);
+}
+.tb-toggle-track[data-on="true"] {
+  background-color: var(--accent);
+}
+
+/* ─── Tool card hover ───────────────────────────────────────────────────── */
+
+.tb-tool-card:hover {
+  background-color: var(--bg-secondary);
+  border-color: var(--border-strong);
+}
+
+/* ─── Command palette row active ────────────────────────────────────────── */
+
+.tb-cp-row[data-active="true"] {
+  background-color: var(--accent-subtle);
+  color: var(--text-primary);
+}
+
+/* ─── Text diff highlighting ────────────────────────────────────────────── */
+/* Background tints reference theme variables so they flip automatically
+   with light/dark mode. `color-mix` keeps the tint subtle so text stays
+   legible on both surfaces. */
+
+.tb-diff-added {
+  background-color: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--text-primary);
+}
+.tb-diff-removed {
+  background-color: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--text-primary);
+}
+.tb-diff-gutter-added {
+  color: var(--success);
+}
+.tb-diff-gutter-removed {
+  color: var(--danger);
+}
+.tb-diff-placeholder {
+  background-color: var(--bg-tertiary);
+}
