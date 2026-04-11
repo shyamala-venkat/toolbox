@@ -60,12 +60,16 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           </label>
         )}
         <div
-          className="flex min-h-[120px]"
+          className="flex"
           style={{
             backgroundColor: 'var(--bg-primary)',
             border: `1px solid ${error ? 'var(--danger)' : 'var(--border-primary)'}`,
             borderRadius: 'var(--radius-md)',
             overflow: 'hidden',
+            // Fix the container to the textarea's intended visible height so
+            // the line-numbers div can't push it taller. line-height is 24px
+            // (leading-6) + 24px vertical padding (p-3 top+bottom).
+            height: ((rest.rows ?? 4) * 24) + 24,
           }}
         >
           {showLineNumbers && (
@@ -92,7 +96,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             aria-invalid={Boolean(error) || undefined}
             aria-describedby={describedBy}
             className={cn(
-              'w-full resize-y bg-transparent p-3 text-sm leading-6 outline-none placeholder:opacity-60',
+              'w-full resize-none bg-transparent p-3 text-sm leading-6 outline-none placeholder:opacity-60',
               monospace && 'mono',
               className,
             )}

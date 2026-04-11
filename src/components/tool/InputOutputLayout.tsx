@@ -78,7 +78,7 @@ export function InputOutputLayout({
         </div>
       )}
 
-      <div className="flex flex-1 flex-col">{output}</div>
+      <div className="flex flex-1 flex-col overflow-hidden">{output}</div>
     </div>
   );
 }

@@ -37,6 +37,15 @@ const TextCleanup = lazy(() => import('./text-cleanup/TextCleanup'));
 const UnitConverter = lazy(() => import('./unit-converter/UnitConverter'));
 const DateCalculator = lazy(() => import('./date-calculator/DateCalculator'));
 const CsvViewer = lazy(() => import('./csv-viewer/CsvViewer'));
+const MarkdownPreview = lazy(() => import('./markdown-preview/MarkdownPreview'));
+const JsonToTypescript = lazy(() => import('./json-to-typescript/JsonToTypescript'));
+const CsvJson = lazy(() => import('./csv-json/CsvJson'));
+const BackslashEscape = lazy(() => import('./backslash-escape/BackslashEscape'));
+const HtmlPreview = lazy(() => import('./html-preview/HtmlPreview'));
+const CronParser = lazy(() => import('./cron-parser/CronParser'));
+const UnixPermissions = lazy(() => import('./unix-permissions/UnixPermissions'));
+const JsonPathEval = lazy(() => import('./jsonpath-eval/JsonPathEval'));
+const EpochBatch = lazy(() => import('./epoch-batch/EpochBatch'));
 // === TOOL_IMPORTS_END ===
 
 export const toolRegistry: ToolDefinition[] = [
@@ -570,6 +579,143 @@ export const toolRegistry: ToolDefinition[] = [
     tier: 'pro',
     requiresBackend: false,
     component: CsvViewer,
+  },
+  // --- Issue 2: Agent I ---
+  {
+    id: 'markdown-preview',
+    name: 'Markdown Preview',
+    description: 'Write Markdown and see a live rendered preview',
+    longDescription:
+      'Paste or type Markdown and see a live, sanitized HTML preview. Supports GitHub Flavored ' +
+      'Markdown — tables, task lists, strikethrough, fenced code blocks, and more. ' +
+      'Runs entirely in your browser.',
+    category: 'text',
+    tags: ['markdown', 'preview', 'render', 'html', 'gfm', 'github'],
+    icon: 'file-text',
+    tier: 'pro',
+    requiresBackend: false,
+    component: MarkdownPreview,
+  },
+  {
+    id: 'json-to-typescript',
+    name: 'JSON to TypeScript',
+    description: 'Generate TypeScript interfaces from JSON data',
+    longDescription:
+      'Paste a JSON payload and instantly get TypeScript interface or type definitions. ' +
+      'Handles nested objects, arrays, mixed-type arrays, and null values. ' +
+      'Customizable root name and interface/type output. Runs entirely in your browser.',
+    category: 'converters',
+    tags: ['json', 'typescript', 'interface', 'type', 'generate', 'convert', 'ts'],
+    icon: 'file-code',
+    tier: 'pro',
+    requiresBackend: false,
+    component: JsonToTypescript,
+  },
+  {
+    id: 'csv-json',
+    name: 'CSV ↔ JSON',
+    description: 'Convert between CSV and JSON formats',
+    longDescription:
+      'Convert CSV to JSON arrays of objects or JSON arrays back to CSV. Auto-detects ' +
+      'input direction, configurable headers, and pretty-print. Uses PapaParse for ' +
+      'robust parsing. Runs entirely in your browser.',
+    category: 'file-tools',
+    tags: ['csv', 'json', 'convert', 'parse', 'table', 'data'],
+    icon: 'file-spreadsheet',
+    tier: 'pro',
+    requiresBackend: false,
+    component: CsvJson,
+  },
+  {
+    id: 'backslash-escape',
+    name: 'Backslash Escape/Unescape',
+    description: 'Escape and unescape special characters for different contexts',
+    longDescription:
+      'Escape or unescape special characters for JSON strings, regular expressions, ' +
+      'HTML, URLs, or general use. Auto-processes as you type with context-aware ' +
+      'character handling. Runs entirely in your browser.',
+    category: 'encoders-decoders',
+    tags: ['escape', 'unescape', 'backslash', 'special', 'characters', 'json', 'regex', 'html', 'url'],
+    icon: 'shield',
+    tier: 'free',
+    requiresBackend: false,
+    component: BackslashEscape,
+  },
+  {
+    id: 'html-preview',
+    name: 'HTML Preview',
+    description: 'Write HTML and see a live rendered preview',
+    longDescription:
+      'Paste or type HTML and see a live, sanitized preview. Optionally view the ' +
+      'source code alongside the rendered output. All HTML is sanitized through ' +
+      'DOMPurify before rendering. Runs entirely in your browser.',
+    category: 'text',
+    tags: ['html', 'preview', 'render', 'live', 'sandbox'],
+    icon: 'eye',
+    tier: 'pro',
+    requiresBackend: false,
+    component: HtmlPreview,
+  },
+  // --- Issue 2: Agent J ---
+  {
+    id: 'cron-parser',
+    name: 'Cron Expression Parser',
+    description: 'Parse cron expressions into human-readable schedules with next run times',
+    longDescription:
+      'Enter a standard 5-field or 6-field (with seconds) cron expression and see its ' +
+      'human-readable description plus the next 10 scheduled execution times. ' +
+      'Includes common presets for quick start. Runs entirely in your browser.',
+    category: 'calculators',
+    tags: ['cron', 'schedule', 'crontab', 'timer', 'job', 'recurring'],
+    icon: 'timer',
+    tier: 'free',
+    requiresBackend: false,
+    component: CronParser,
+  },
+  {
+    id: 'unix-permissions',
+    name: 'Unix Permissions Calculator',
+    description: 'Convert between octal, symbolic, and checkbox representations of file permissions',
+    longDescription:
+      'Edit Unix file permissions via octal input (e.g. 755), a checkbox grid, or ' +
+      'symbolic display (rwxr-xr-x). All representations stay in sync as you edit. ' +
+      'Shows the corresponding chmod command.',
+    category: 'calculators',
+    tags: ['unix', 'permissions', 'chmod', 'octal', 'rwx', 'linux', 'file'],
+    icon: 'lock',
+    tier: 'free',
+    requiresBackend: false,
+    component: UnixPermissions,
+  },
+  {
+    id: 'jsonpath-eval',
+    name: 'JSON Path Evaluator',
+    description: 'Evaluate JSONPath expressions against JSON data with live results',
+    longDescription:
+      'Paste JSON data and a JSONPath expression to instantly see matched results. ' +
+      'Supports the full JSONPath spec including filters, wildcards, and recursive descent. ' +
+      'Includes a library of common expressions. Runs entirely in your browser.',
+    category: 'converters',
+    tags: ['json', 'jsonpath', 'query', 'filter', 'evaluate', 'path', 'data'],
+    icon: 'search',
+    tier: 'pro',
+    requiresBackend: false,
+    component: JsonPathEval,
+  },
+  {
+    id: 'epoch-batch',
+    name: 'Epoch Batch Converter',
+    description: 'Convert multiple Unix timestamps to human-readable dates at once',
+    longDescription:
+      'Paste multiple Unix timestamps (one per line) and see each converted to ISO 8601, ' +
+      'local time, and relative time. Auto-detects seconds (10 digits) vs milliseconds ' +
+      '(13 digits) per line. Copy all results as CSV or formatted text.',
+    category: 'converters',
+    tags: ['epoch', 'timestamp', 'batch', 'unix', 'convert', 'bulk', 'date'],
+    icon: 'list',
+    tier: 'pro',
+    requiresBackend: false,
+    component: EpochBatch,
   },
   // === TOOL_REGISTRATIONS_END ===
 ];

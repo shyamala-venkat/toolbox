@@ -20,7 +20,7 @@ export default defineConfig({
   // Tauri expects a fixed port and to fail if not available
   clearScreen: false,
   server: {
-    port: 1420,
+    port: 5177,
     strictPort: true,
     host: host || false,
     hmr: host
@@ -40,5 +40,8 @@ export default defineConfig({
     target: 'es2022',
     minify: 'esbuild',
     sourcemap: false,
+    // vanilla-jsoneditor is ~1 MB — acceptable for a desktop app (loads from
+    // disk, not network). Suppress the chunk size warning.
+    chunkSizeWarningLimit: 1200,
   },
 });

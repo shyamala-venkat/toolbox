@@ -9,26 +9,31 @@ import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { JsonTreeView } from './JsonTreeView';
 import { meta } from './meta';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 type IndentChoice = '2' | '4' | 'tab';
+type ViewMode = 'text' | 'tree';
 
 interface JsonFormatterDefaults {
   indent: IndentChoice;
   sortKeys: boolean;
   minify: boolean;
+  viewMode: ViewMode;
 }
 
 const DEFAULTS: JsonFormatterDefaults = {
   indent: '2',
   sortKeys: false,
   minify: false,
+  viewMode: 'text',
 };
 
 interface FormatResult {
   output: string;
+  parsed: unknown;
   error: string | null;
   errorLine: number | null;
   errorColumn: number | null;
@@ -39,10 +44,6 @@ interface FormatResult {
 const stripBom = (s: string): string =>
   s.length > 0 && s.charCodeAt(0) === 0xfeff ? s.slice(1) : s;
 
-/**
- * Recursively sort object keys (arrays preserve order). Used when the
- * "sort keys" option is on.
- */
 const sortKeysDeep = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(sortKeysDeep);
   if (value !== null && typeof value === 'object') {
@@ -56,10 +57,6 @@ const sortKeysDeep = (value: unknown): unknown => {
   return value;
 };
 
-/**
- * Convert a character offset (from `JSON.parse` error messages) to a
- * line/column pair against the original text. Both 1-indexed.
- */
 const offsetToLineCol = (
   text: string,
   offset: number,
@@ -78,11 +75,6 @@ const offsetToLineCol = (
   return { line, column };
 };
 
-/**
- * Parse a JSON.parse error message for a position offset. The native error
- * shape varies between engines: V8 uses "at position N", SpiderMonkey uses
- * "at line L column C". We try both.
- */
 const extractErrorLocation = (
   message: string,
   source: string,
@@ -110,7 +102,7 @@ const formatJson = (
 ): FormatResult => {
   const source = stripBom(raw);
   if (source.trim().length === 0) {
-    return { output: '', error: null, errorLine: null, errorColumn: null };
+    return { output: '', parsed: undefined, error: null, errorLine: null, errorColumn: null };
   }
   let parsed: unknown;
   try {
@@ -120,6 +112,7 @@ const formatJson = (
     const loc = extractErrorLocation(message, source);
     return {
       output: '',
+      parsed: undefined,
       error: message,
       errorLine: loc?.line ?? null,
       errorColumn: loc?.column ?? null,
@@ -135,26 +128,32 @@ const formatJson = (
     const output = JSON.stringify(value, null, indentArg);
     return {
       output: output ?? '',
+      parsed: value,
       error: null,
       errorLine: null,
       errorColumn: null,
     };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return { output: '', error: message, errorLine: null, errorColumn: null };
+    return { output: '', parsed: undefined, error: message, errorLine: null, errorColumn: null };
   }
 };
 
 const countLines = (s: string): number => (s.length === 0 ? 0 : s.split('\n').length);
 
-// ─── Component ──────────────────────────────────────────────────────────────
+const topLevelCount = (v: unknown): number => {
+  if (Array.isArray(v)) return v.length;
+  if (v !== null && typeof v === 'object') return Object.keys(v).length;
+  return 0;
+};
 
-// Defense-in-depth: a malformed `preferences.json` (manually edited or from
-// a future schema) shouldn't crash the tool. Validate every persisted field
-// against its expected runtime shape and fall back to a hard-coded default
-// when the value isn't usable. The user won't notice the recovery.
+// ─── Persistence ────────────────────────────────────────────────────────────
+
 const isIndentChoice = (value: unknown): value is IndentChoice =>
   value === '2' || value === '4' || value === 'tab';
+
+const isViewMode = (value: unknown): value is ViewMode =>
+  value === 'text' || value === 'tree';
 
 const sanitizeJsonFormatterDefaults = (raw: unknown): JsonFormatterDefaults => {
   if (raw === null || typeof raw !== 'object') return { ...DEFAULTS };
@@ -163,21 +162,18 @@ const sanitizeJsonFormatterDefaults = (raw: unknown): JsonFormatterDefaults => {
     indent: isIndentChoice(obj.indent) ? obj.indent : DEFAULTS.indent,
     sortKeys: typeof obj.sortKeys === 'boolean' ? obj.sortKeys : DEFAULTS.sortKeys,
     minify: typeof obj.minify === 'boolean' ? obj.minify : DEFAULTS.minify,
+    viewMode: isViewMode(obj.viewMode) ? obj.viewMode : DEFAULTS.viewMode,
   };
 };
 
+// ─── Component ──────────────────────────────────────────────────────────────
+
 function JsonFormatter() {
-  // Subscribe to just this tool's slice of tool_defaults so unrelated tools
-  // persisting their own defaults don't cause a re-render here. Zustand
-  // compares the returned reference, and `settingsStore.update()` creates a
-  // fresh nested object only for the tool that actually changed.
   const stored = useSettingsStore((s) => s.preferences.toolDefaults[meta.id]);
   const update = useSettingsStore((s) => s.update);
 
   const initial: JsonFormatterDefaults = useMemo(
     () => sanitizeJsonFormatterDefaults(stored),
-    // We only want to read stored defaults once on mount; subsequent changes
-    // are pushed via persistDefault below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -186,6 +182,7 @@ function JsonFormatter() {
   const [indent, setIndent] = useState<IndentChoice>(initial.indent);
   const [sortKeys, setSortKeys] = useState<boolean>(initial.sortKeys);
   const [minify, setMinify] = useState<boolean>(initial.minify);
+  const [viewMode, setViewMode] = useState<ViewMode>(initial.viewMode);
 
   const debouncedInput = useDebounce(input, 150);
 
@@ -194,31 +191,15 @@ function JsonFormatter() {
     [debouncedInput, indent, sortKeys, minify],
   );
 
-  // Persist option changes (after the initial mount snapshot has been read).
-  // We read the full `toolDefaults` map lazily via `getState()` so this
-  // component doesn't subscribe to it — otherwise every unrelated tool's
-  // persist would trigger a re-render here.
   const persistDefaults = useCallback(
     (next: Partial<JsonFormatterDefaults>) => {
-      const merged: JsonFormatterDefaults = {
-        indent,
-        sortKeys,
-        minify,
-        ...next,
-      };
+      const merged: JsonFormatterDefaults = { indent, sortKeys, minify, viewMode, ...next };
       const allDefaults = useSettingsStore.getState().preferences.toolDefaults;
-      update({
-        toolDefaults: {
-          ...allDefaults,
-          [meta.id]: merged,
-        },
-      });
+      update({ toolDefaults: { ...allDefaults, [meta.id]: merged } });
     },
-    [indent, sortKeys, minify, update],
+    [indent, sortKeys, minify, viewMode, update],
   );
 
-  // Re-persist whenever any option changes (skips first mount via the
-  // initial-state guard).
   const [didMount, setDidMount] = useState(false);
   useEffect(() => {
     if (!didMount) {
@@ -226,10 +207,8 @@ function JsonFormatter() {
       return;
     }
     persistDefaults({});
-    // persistDefaults intentionally not in deps — it's a fresh closure each
-    // render, and the option values it depends on are listed below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indent, sortKeys, minify]);
+  }, [indent, sortKeys, minify, viewMode]);
 
   const handleClear = useCallback(() => setInput(''), []);
 
@@ -242,7 +221,49 @@ function JsonFormatter() {
   const hasError = !isEmpty && result.error !== null;
   const isValid = !isEmpty && result.error === null && result.output.length > 0;
 
-  // ─── Sub-renders ──────────────────────────────────────────────────────────
+  // ─── View mode tabs ─────────────────────────────────────────────────────
+
+  const viewModeTabs = (
+    <div
+      role="tablist"
+      aria-label="Output view mode"
+      className="inline-flex p-0.5"
+      style={{
+        backgroundColor: 'var(--bg-primary)',
+        border: '1px solid var(--border-primary)',
+        borderRadius: 'var(--radius-md)',
+      }}
+    >
+      {(
+        [
+          { id: 'text', label: 'Text' },
+          { id: 'tree', label: 'Tree' },
+        ] as const
+      ).map((tab) => {
+        const isActive = viewMode === tab.id;
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => setViewMode(tab.id)}
+            className="inline-flex items-center px-3 py-1.5 text-xs font-medium transition-colors duration-150"
+            style={{
+              backgroundColor: isActive ? 'var(--bg-secondary)' : 'transparent',
+              color: isActive ? 'var(--text-primary)' : 'var(--text-tertiary)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: isActive ? 'var(--shadow-sm)' : 'none',
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  // ─── Options bar ──────────────────────────────────────────────────────────
 
   const optionsBar = (
     <div
@@ -253,36 +274,33 @@ function JsonFormatter() {
         borderRadius: 'var(--radius-md)',
       }}
     >
-      <div className="flex items-center gap-2">
-        <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-          Indent
-        </span>
-        <div className="w-24">
-          <Select
-            aria-label="Indentation"
-            value={indent}
-            onChange={(e) => setIndent(e.target.value as IndentChoice)}
-            options={[
-              { value: '2', label: '2 spaces' },
-              { value: '4', label: '4 spaces' },
-              { value: 'tab', label: 'Tab' },
-            ]}
-            disabled={minify}
-          />
-        </div>
-      </div>
+      {viewModeTabs}
 
-      <Toggle
-        checked={sortKeys}
-        onChange={setSortKeys}
-        label="Sort keys"
-      />
+      {viewMode === 'text' && (
+        <>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+              Indent
+            </span>
+            <div className="w-24">
+              <Select
+                aria-label="Indentation"
+                value={indent}
+                onChange={(e) => setIndent(e.target.value as IndentChoice)}
+                options={[
+                  { value: '2', label: '2 spaces' },
+                  { value: '4', label: '4 spaces' },
+                  { value: 'tab', label: 'Tab' },
+                ]}
+                disabled={minify}
+              />
+            </div>
+          </div>
 
-      <Toggle
-        checked={minify}
-        onChange={setMinify}
-        label="Minify"
-      />
+          <Toggle checked={sortKeys} onChange={setSortKeys} label="Sort keys" />
+          <Toggle checked={minify} onChange={setMinify} label="Minify" />
+        </>
+      )}
 
       <div className="ml-auto flex items-center gap-2">
         {isValid && (
@@ -307,6 +325,8 @@ function JsonFormatter() {
     </div>
   );
 
+  // ─── Input panel ──────────────────────────────────────────────────────────
+
   const inputPanel = (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
@@ -317,13 +337,7 @@ function JsonFormatter() {
         >
           Input
         </label>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleClear}
-          disabled={input.length === 0}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={handleClear} disabled={input.length === 0}>
           Clear
         </Button>
       </div>
@@ -338,10 +352,7 @@ function JsonFormatter() {
         rows={18}
         aria-label="JSON input"
       />
-      <div
-        className="flex items-center justify-between text-xs"
-        style={{ color: 'var(--text-tertiary)' }}
-      >
+      <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-tertiary)' }}>
         <span>
           {inputLines} {inputLines === 1 ? 'line' : 'lines'} · {inputChars}{' '}
           {inputChars === 1 ? 'character' : 'characters'}
@@ -350,7 +361,9 @@ function JsonFormatter() {
     </div>
   );
 
-  const outputPanel = (
+  // ─── Text output ──────────────────────────────────────────────────────────
+
+  const textOutputPanel = (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
@@ -397,10 +410,7 @@ function JsonFormatter() {
           aria-label="Formatted JSON output"
         />
       )}
-      <div
-        className="flex items-center justify-between text-xs"
-        style={{ color: 'var(--text-tertiary)' }}
-      >
+      <div className="flex items-center justify-between text-xs" style={{ color: 'var(--text-tertiary)' }}>
         <span>
           {outputLines} {outputLines === 1 ? 'line' : 'lines'} · {outputChars}{' '}
           {outputChars === 1 ? 'character' : 'characters'}
@@ -409,10 +419,55 @@ function JsonFormatter() {
     </div>
   );
 
+  // ─── Tree output ──────────────────────────────────────────────────────────
+
+  const treeOutputPanel = (
+    // flex-1 so this div fills the InputOutputLayout wrapper (whose height
+    // is determined by the textarea on the left via items-stretch).
+    <div className="flex flex-1 flex-col gap-2">
+      {/* Header — matches the input panel's "Input / Clear" row */}
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+          Tree View
+        </span>
+      </div>
+      {/* flex-1 + min-h-0: fill remaining space after header/footer and
+          allow internal scroll. No hardcoded height — the textarea on the
+          left determines the container height via items-stretch, and this
+          div grows to match. */}
+      <div
+        className="flex-1"
+        style={{
+          border: '1px solid var(--border-primary)',
+          borderRadius: 'var(--radius-md)',
+          overflow: 'hidden',
+          minHeight: 0,
+        }}
+      >
+        <JsonTreeView
+          data={result.parsed}
+          className="h-full"
+        />
+      </div>
+      {/* Footer — matches the input panel's line/char count */}
+      <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+        {result.parsed !== undefined
+          ? `${topLevelCount(result.parsed)} top-level ${typeof result.parsed === 'object' && result.parsed !== null && !Array.isArray(result.parsed) ? 'keys' : 'items'}`
+          : '\u00A0'}
+      </div>
+    </div>
+  );
+
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
     <ToolPage tool={meta} fullWidth>
       {optionsBar}
-      <InputOutputLayout input={inputPanel} output={outputPanel} direction="horizontal" />
+      <InputOutputLayout
+        input={inputPanel}
+        output={viewMode === 'text' ? textOutputPanel : treeOutputPanel}
+        direction="horizontal"
+      />
     </ToolPage>
   );
 }
