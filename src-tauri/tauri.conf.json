@@ -27,6 +27,14 @@
       "dangerousDisableAssetCspModification": false
     }
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/shyamala-venkat/toolbox/releases/latest/download/latest.json"
+      ],
+      "pubkey": ""
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

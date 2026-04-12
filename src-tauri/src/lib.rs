@@ -26,6 +26,8 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         // macOS requires a native Edit menu for Cmd+V/C/X/A to reach the
         // webview. Without this, those shortcuts are intercepted by the
         // platform and never forwarded to the React application. The app

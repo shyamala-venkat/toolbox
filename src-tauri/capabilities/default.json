@@ -35,6 +35,10 @@
     },
 
     "os:allow-platform",
-    "os:allow-arch"
+    "os:allow-arch",
+
+    "updater:default",
+
+    "process:allow-restart"
   ]
 }

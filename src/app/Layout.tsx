@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
+import { UpdateBanner } from '@/components/UpdateBanner';
 import { Toast } from '@/components/ui/Toast';
 import { applyThemeToDocument, useAppStore } from '@/stores/appStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -103,19 +104,22 @@ export function Layout() {
 
   return (
     <div
-      className="flex h-full w-full"
+      className="flex h-full w-full flex-col"
       style={{
         backgroundColor: 'var(--bg-primary)',
         color: 'var(--text-primary)',
       }}
     >
-      <Sidebar />
-      <main
-        className="flex min-w-0 flex-1 flex-col overflow-y-auto"
-        style={{ backgroundColor: 'var(--bg-primary)' }}
-      >
-        <Outlet />
-      </main>
+      <UpdateBanner />
+      <div className="flex min-h-0 flex-1">
+        <Sidebar />
+        <main
+          className="flex min-w-0 flex-1 flex-col overflow-y-auto"
+          style={{ backgroundColor: 'var(--bg-primary)' }}
+        >
+          <Outlet />
+        </main>
+      </div>
       <CommandPalette />
       <Toast />
     </div>
