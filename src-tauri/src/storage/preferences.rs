@@ -20,6 +20,7 @@ pub struct UserPreferences {
     pub favorite_tool_ids: Vec<String>,
     pub recent_tool_ids: Vec<String>,
     pub compact_mode: bool,
+    pub minimize_to_tray: bool,
     pub monospace_font_size: u32,
     pub tool_defaults: serde_json::Value,
 }
@@ -36,6 +37,7 @@ impl Default for UserPreferences {
             favorite_tool_ids: Vec::new(),
             recent_tool_ids: Vec::new(),
             compact_mode: false,
+            minimize_to_tray: true,
             monospace_font_size: 14,
             tool_defaults: serde_json::Value::Object(serde_json::Map::new()),
         }

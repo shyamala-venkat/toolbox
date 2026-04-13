@@ -18,6 +18,10 @@ use commands::{
     preferences::{check_preferences_recovery, dismiss_preferences_recovery, get_preferences, set_preferences},
     system::{get_app_version, get_arch, get_platform},
 };
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::Manager;
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -28,13 +32,12 @@ pub fn run() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         // macOS requires a native Edit menu for Cmd+V/C/X/A to reach the
         // webview. Without this, those shortcuts are intercepted by the
         // platform and never forwarded to the React application. The app
         // menu (first submenu) provides the standard About/Hide/Quit items.
         .menu(|handle| {
-            use tauri::menu::{Menu, PredefinedMenuItem, Submenu};
-
             let app_menu = Submenu::with_items(
                 handle,
                 "ToolBox",
@@ -110,6 +113,88 @@ pub fn run() {
             dismiss_preferences_recovery,
             set_preferences,
         ])
+        .setup(|app| {
+            // ── Tray icon ────────────────────────────────────────────────
+            let show_item = MenuItem::with_id(app, "show", "Show ToolBox", true, None::<&str>)?;
+            let separator = PredefinedMenuItem::separator(app)?;
+            let quit_item = MenuItem::with_id(app, "quit", "Quit ToolBox", true, None::<&str>)?;
+            let tray_menu = Menu::with_items(app, &[&show_item, &separator, &quit_item])?;
+
+            TrayIconBuilder::new()
+                .icon(app.default_window_icon().cloned().expect("app icon must exist"))
+                .menu(&tray_menu)
+                .tooltip("ToolBox")
+                .on_menu_event(|app, event| {
+                    match event.id().as_ref() {
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click {
+                        button: MouseButton::Left,
+                        button_state: MouseButtonState::Up,
+                        ..
+                    } = event
+                    {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_visible().unwrap_or(false) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
+            // ── Global shortcut: Cmd+Shift+T (macOS) / Ctrl+Shift+T (others) ─
+            #[cfg(target_os = "macos")]
+            let modifier = Modifiers::SUPER | Modifiers::SHIFT;
+            #[cfg(not(target_os = "macos"))]
+            let modifier = Modifiers::CONTROL | Modifiers::SHIFT;
+
+            let toggle_shortcut = Shortcut::new(Some(modifier), Code::KeyT);
+            app.global_shortcut().on_shortcut(toggle_shortcut, |app, _shortcut, event| {
+                if event.state == ShortcutState::Pressed {
+                    if let Some(window) = app.get_webview_window("main") {
+                        if window.is_visible().unwrap_or(false) {
+                            let _ = window.hide();
+                        } else {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                }
+            })?;
+
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let should_hide = window
+                    .app_handle()
+                    .path()
+                    .app_data_dir()
+                    .map(|dir| storage::preferences::load(&dir).minimize_to_tray)
+                    .unwrap_or(true);
+
+                if should_hide {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -191,6 +191,12 @@ export function Settings() {
           label="Clear input on tool switch"
           description="Reset input and output when navigating to a different tool."
         />
+        <Toggle
+          checked={preferences.minimizeToTray}
+          onChange={(v) => update({ minimizeToTray: v })}
+          label="Minimize to tray on close"
+          description="Hide the window instead of quitting when you close it. Access ToolBox from the menu bar icon or with Cmd+Shift+T."
+        />
       </SettingsSection>
 
       <SettingsSection

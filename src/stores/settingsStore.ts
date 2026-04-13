@@ -34,6 +34,7 @@ export interface UserPreferences {
   favoriteToolIds: string[];
   recentToolIds: string[];
   compactMode: boolean;
+  minimizeToTray: boolean;
   monospaceFontSize: number;
   toolDefaults: Record<string, unknown>;
 }
@@ -48,6 +49,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   favoriteToolIds: [],
   recentToolIds: [],
   compactMode: false,
+  minimizeToTray: true,
   monospaceFontSize: 14,
   toolDefaults: {},
 };
@@ -62,6 +64,7 @@ const fromRust = (r: RustUserPreferences): UserPreferences => ({
   favoriteToolIds: r.favorite_tool_ids,
   recentToolIds: r.recent_tool_ids,
   compactMode: r.compact_mode,
+  minimizeToTray: r.minimize_to_tray,
   monospaceFontSize: r.monospace_font_size,
   toolDefaults:
     r.tool_defaults && typeof r.tool_defaults === 'object'
@@ -79,6 +82,7 @@ const toRust = (p: UserPreferences): RustUserPreferences => ({
   favorite_tool_ids: p.favoriteToolIds,
   recent_tool_ids: p.recentToolIds,
   compact_mode: p.compactMode,
+  minimize_to_tray: p.minimizeToTray,
   monospace_font_size: p.monospaceFontSize,
   tool_defaults: p.toolDefaults,
 });

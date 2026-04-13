@@ -86,6 +86,7 @@ export interface RustUserPreferences {
   favorite_tool_ids: string[];
   recent_tool_ids: string[];
   compact_mode: boolean;
+  minimize_to_tray: boolean;
   monospace_font_size: number;
   tool_defaults: Record<string, unknown>;
 }
