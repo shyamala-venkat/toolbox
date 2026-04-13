@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ToolBox — The Offline Toolkit That Replaces 30 Apps</title>
+  <meta name="description" content="44 productivity tools in one fast desktop app. PDF, image, text, data tools — all offline. No uploads. No subscriptions. No accounts. Just tools.">
+  <link rel="icon" type="image/png" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧰</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwindcss.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#4f46e5', light: '#818cf8', dark: '#3730a3' },
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    .gradient-bg { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #6366f1 100%); }
+    .tool-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.1); }
+    .tool-card { transition: all 0.2s ease; }
+  </style>
+</head>
+<body class="bg-white text-gray-900 antialiased">
+
+  <!-- Hero -->
+  <section class="gradient-bg text-white">
+    <nav class="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-2xl font-bold">ToolBox</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="#tools" class="text-sm text-white/80 hover:text-white">Tools</a>
+        <a href="#pricing" class="text-sm text-white/80 hover:text-white">Pricing</a>
+        <a href="#download" class="bg-white text-brand font-semibold text-sm px-4 py-2 rounded-lg hover:bg-gray-100 transition">Download</a>
+      </div>
+    </nav>
+
+    <div class="max-w-4xl mx-auto px-6 py-20 text-center">
+      <h1 class="text-4xl md:text-6xl font-extrabold leading-tight mb-6">
+        The offline toolkit that<br>replaces 30 apps.
+      </h1>
+      <p class="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
+        44 productivity tools in one fast, native desktop app. PDF merge, image compress, JSON format, unit convert — all running 100% on your machine. No uploads. No accounts. No subscriptions.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+        <a href="#download" class="bg-white text-brand font-semibold px-8 py-3 rounded-xl text-lg hover:bg-gray-100 transition shadow-lg">
+          Download Free
+        </a>
+        <a href="#pricing" class="border-2 border-white/30 text-white font-semibold px-8 py-3 rounded-xl text-lg hover:border-white/60 transition">
+          See Pricing
+        </a>
+      </div>
+      <p class="text-sm text-white/60">macOS (Apple Silicon) · Windows & Linux coming soon</p>
+    </div>
+  </section>
+
+  <!-- Privacy pitch -->
+  <section class="bg-gray-50 border-b">
+    <div class="max-w-5xl mx-auto px-6 py-12 grid md:grid-cols-3 gap-8 text-center">
+      <div>
+        <div class="text-3xl mb-3">🔒</div>
+        <h3 class="font-semibold mb-1">Your files never leave</h3>
+        <p class="text-sm text-gray-600">Everything runs on your machine. No cloud uploads, no server processing. Your data stays yours.</p>
+      </div>
+      <div>
+        <div class="text-3xl mb-3">⚡</div>
+        <h3 class="font-semibold mb-1">Instant & native</h3>
+        <p class="text-sm text-gray-600">Built with Rust — not Electron. Sub-second startup, every tool loads in under 100ms.</p>
+      </div>
+      <div>
+        <div class="text-3xl mb-3">🌐</div>
+        <h3 class="font-semibold mb-1">Works offline</h3>
+        <p class="text-sm text-gray-600">No internet required. No accounts. No telemetry. Zero network calls from every tool.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tools grid -->
+  <section id="tools" class="max-w-6xl mx-auto px-6 py-20">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold mb-3">44 tools. One app.</h2>
+      <p class="text-gray-600 max-w-xl mx-auto">Stop pasting sensitive files into random websites. Every tool you need, right on your desktop.</p>
+    </div>
+
+    <!-- PDF Tools -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-brand mb-4 flex items-center gap-2">
+        <span>📄</span> PDF Tools
+      </h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">PDF Merge</div><div class="text-xs text-gray-500 mt-1">Combine multiple PDFs</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">PDF Split</div><div class="text-xs text-gray-500 mt-1">Split by page range</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">PDF Compress</div><div class="text-xs text-gray-500 mt-1">Reduce file size</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">PDF to Image</div><div class="text-xs text-gray-500 mt-1">Convert pages to PNG/JPG</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">PDF Pages</div><div class="text-xs text-gray-500 mt-1">Rotate, reorder, delete</div></div>
+      </div>
+    </div>
+
+    <!-- Image Tools -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-brand mb-4 flex items-center gap-2">
+        <span>🖼️</span> Image Tools
+      </h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Image Resize</div><div class="text-xs text-gray-500 mt-1">Resize by pixels or %</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Image Compress</div><div class="text-xs text-gray-500 mt-1">mozjpeg + oxipng</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Format Convert</div><div class="text-xs text-gray-500 mt-1">PNG, JPG, WebP, BMP…</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">EXIF Strip</div><div class="text-xs text-gray-500 mt-1">Remove location data</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Batch Process</div><div class="text-xs text-gray-500 mt-1">100+ files at once</div></div>
+      </div>
+    </div>
+
+    <!-- Text & Writing -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-brand mb-4 flex items-center gap-2">
+        <span>✍️</span> Writing & Text
+      </h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Word Counter</div><div class="text-xs text-gray-500 mt-1">Words, chars, reading time</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Text Cleanup</div><div class="text-xs text-gray-500 mt-1">Trim, dedupe, sort</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Text Case</div><div class="text-xs text-gray-500 mt-1">13 case conversions</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Text Diff</div><div class="text-xs text-gray-500 mt-1">Side-by-side or unified</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Regex Tester</div><div class="text-xs text-gray-500 mt-1">Sandboxed Web Worker</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Markdown Preview</div><div class="text-xs text-gray-500 mt-1">Live GFM rendering</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">HTML Preview</div><div class="text-xs text-gray-500 mt-1">Sanitized live preview</div></div>
+      </div>
+    </div>
+
+    <!-- Calculators -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-brand mb-4 flex items-center gap-2">
+        <span>🧮</span> Calculators
+      </h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Unit Converter</div><div class="text-xs text-gray-500 mt-1">10 categories, 80+ units</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Date Calculator</div><div class="text-xs text-gray-500 mt-1">Difference, add/subtract</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Cron Parser</div><div class="text-xs text-gray-500 mt-1">Human-readable schedules</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Unix Permissions</div><div class="text-xs text-gray-500 mt-1">Octal ↔ symbolic ↔ grid</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+      </div>
+    </div>
+
+    <!-- Data & File Tools -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-brand mb-4 flex items-center gap-2">
+        <span>📊</span> Data & File Tools
+      </h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">JSON Formatter</div><div class="text-xs text-gray-500 mt-1">Format, validate, tree view</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">CSV Viewer</div><div class="text-xs text-gray-500 mt-1">Sort, filter, edit, export</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">CSV ↔ JSON</div><div class="text-xs text-gray-500 mt-1">Bidirectional conversion</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">YAML ↔ JSON</div><div class="text-xs text-gray-500 mt-1">Auto-detect direction</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">SQL Formatter</div><div class="text-xs text-gray-500 mt-1">8 dialect support</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">XML Formatter</div><div class="text-xs text-gray-500 mt-1">Pretty-print, minify</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">JSON to TypeScript</div><div class="text-xs text-gray-500 mt-1">Generate interfaces</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">JSON Path</div><div class="text-xs text-gray-500 mt-1">Query with JSONPath</div></div>
+      </div>
+    </div>
+
+    <!-- More categories in compact list -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-brand mb-4 flex items-center gap-2">
+        <span>🔐</span> Security & Encoding
+      </h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Hash Generator</div><div class="text-xs text-gray-500 mt-1">MD5, SHA-256, CRC32…</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Password Gen</div><div class="text-xs text-gray-500 mt-1">CSPRNG + strength meter</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Base64</div><div class="text-xs text-gray-500 mt-1">Encode/decode text & files</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">JWT Decoder</div><div class="text-xs text-gray-500 mt-1">Header, payload, expiry</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">URL Encoder</div><div class="text-xs text-gray-500 mt-1">Component or full URL</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+      </div>
+    </div>
+
+    <!-- Generators -->
+    <div class="mb-10">
+      <h3 class="text-lg font-semibold text-brand mb-4 flex items-center gap-2">
+        <span>⚡</span> Generators & More
+      </h3>
+      <div class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">UUID Generator</div><div class="text-xs text-gray-500 mt-1">v1, v4, v7 — bulk</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">QR Code</div><div class="text-xs text-gray-500 mt-1">PNG + SVG download</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Lorem Ipsum</div><div class="text-xs text-gray-500 mt-1">Paragraphs, words, bytes</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Color Converter</div><div class="text-xs text-gray-500 mt-1">HEX, RGB, HSL, WCAG</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Timestamp</div><div class="text-xs text-gray-500 mt-1">Unix, ISO, relative</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Epoch Batch</div><div class="text-xs text-gray-500 mt-1">Bulk timestamp convert</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Backslash Escape</div><div class="text-xs text-gray-500 mt-1">JSON, regex, HTML, URL</div><span class="inline-block mt-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">FREE</span></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">GZip</div><div class="text-xs text-gray-500 mt-1">Compress/decompress</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">HTML Entities</div><div class="text-xs text-gray-500 mt-1">Encode/decode</div></div>
+        <div class="tool-card bg-white border rounded-xl p-4"><div class="font-medium text-sm">Number Base</div><div class="text-xs text-gray-500 mt-1">Binary, hex, octal</div></div>
+      </div>
+    </div>
+
+    <p class="text-center text-sm text-gray-500 mt-8">
+      20 tools free forever. All 44 tools with Pro.
+    </p>
+  </section>
+
+  <!-- Comparison -->
+  <section class="bg-gray-50 border-y">
+    <div class="max-w-4xl mx-auto px-6 py-16 text-center">
+      <h2 class="text-3xl font-bold mb-3">Stop paying for tools that upload your files.</h2>
+      <p class="text-gray-600 mb-10">See what you're replacing:</p>
+      <div class="grid md:grid-cols-3 gap-6 text-left">
+        <div class="bg-white rounded-xl p-6 border">
+          <div class="text-sm font-semibold text-red-600 mb-2">SmallPDF — $12/month</div>
+          <p class="text-sm text-gray-600">Uploads your PDFs to their servers. File size limits on free tier. Subscription required.</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 border">
+          <div class="text-sm font-semibold text-red-600 mb-2">TinyPNG — $39/year</div>
+          <p class="text-sm text-gray-600">Uploads your images to their cloud. 20 images/session limit. API pricing for bulk.</p>
+        </div>
+        <div class="bg-white rounded-xl p-6 border">
+          <div class="text-sm font-semibold text-red-600 mb-2">Grammarly — $12/month</div>
+          <p class="text-sm text-gray-600">Reads everything you type. Cloud-processed. Subscription-locked features.</p>
+        </div>
+      </div>
+      <div class="mt-8 bg-brand/5 border-2 border-brand/20 rounded-xl p-6">
+        <div class="text-sm font-semibold text-brand mb-2">ToolBox — $30 once, forever</div>
+        <p class="text-sm text-gray-600">All 44 tools. Nothing uploaded. Nothing tracked. Works offline. One payment, lifetime access.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing -->
+  <section id="pricing" class="max-w-4xl mx-auto px-6 py-20">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl font-bold mb-3">Simple pricing. No surprises.</h2>
+      <p class="text-gray-600">Start free. Upgrade when you need more.</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+      <!-- Free -->
+      <div class="border-2 rounded-2xl p-8">
+        <h3 class="text-xl font-bold mb-1">Free</h3>
+        <div class="text-4xl font-extrabold mb-1">$0</div>
+        <p class="text-sm text-gray-500 mb-6">forever</p>
+        <ul class="space-y-3 text-sm text-gray-700 mb-8">
+          <li class="flex items-start gap-2"><span class="text-green-500 mt-0.5">✓</span> 20 essential tools</li>
+          <li class="flex items-start gap-2"><span class="text-green-500 mt-0.5">✓</span> JSON, Base64, UUID, Timestamp</li>
+          <li class="flex items-start gap-2"><span class="text-green-500 mt-0.5">✓</span> PDF Merge, Image Resize/Compress</li>
+          <li class="flex items-start gap-2"><span class="text-green-500 mt-0.5">✓</span> Word Counter, Unit Converter</li>
+          <li class="flex items-start gap-2"><span class="text-green-500 mt-0.5">✓</span> 100% offline, no accounts</li>
+        </ul>
+        <a href="#download" class="block text-center border-2 border-brand text-brand font-semibold py-3 rounded-xl hover:bg-brand/5 transition">Download Free</a>
+      </div>
+      <!-- Pro -->
+      <div class="border-2 border-brand rounded-2xl p-8 relative">
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-brand text-white text-xs font-semibold px-3 py-1 rounded-full">BEST VALUE</div>
+        <h3 class="text-xl font-bold mb-1">Pro</h3>
+        <div class="flex items-baseline gap-2 mb-1">
+          <span class="text-4xl font-extrabold">$30</span>
+          <span class="text-sm text-gray-500">one-time</span>
+        </div>
+        <p class="text-sm text-gray-500 mb-1">or $4/month</p>
+        <p class="text-xs text-gray-400 mb-6">Lifetime access. One payment. Done.</p>
+        <ul class="space-y-3 text-sm text-gray-700 mb-8">
+          <li class="flex items-start gap-2"><span class="text-brand mt-0.5">✓</span> <strong>All 44 tools</strong></li>
+          <li class="flex items-start gap-2"><span class="text-brand mt-0.5">✓</span> PDF Split, Compress, Pages, to Image</li>
+          <li class="flex items-start gap-2"><span class="text-brand mt-0.5">✓</span> EXIF Strip, Image Batch Processing</li>
+          <li class="flex items-start gap-2"><span class="text-brand mt-0.5">✓</span> CSV Viewer, SQL Formatter, Regex Tester</li>
+          <li class="flex items-start gap-2"><span class="text-brand mt-0.5">✓</span> 1 year of free updates</li>
+          <li class="flex items-start gap-2"><span class="text-brand mt-0.5">✓</span> Priority support</li>
+        </ul>
+        <a href="#" class="block text-center bg-brand text-white font-semibold py-3 rounded-xl hover:bg-brand-dark transition">Get Pro — $30</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section id="download" class="gradient-bg text-white">
+    <div class="max-w-4xl mx-auto px-6 py-16 text-center">
+      <h2 class="text-3xl font-bold mb-3">Download ToolBox</h2>
+      <p class="text-white/70 mb-8">Free. No account needed. Just download and start using.</p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-6">
+        <a href="https://github.com/shyamala-venkat/toolbox/releases/latest" class="bg-white text-brand font-semibold px-8 py-3 rounded-xl text-lg hover:bg-gray-100 transition shadow-lg inline-flex items-center gap-2">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          Download from GitHub
+        </a>
+      </div>
+      <p class="text-sm text-white/50">macOS (Apple Silicon) · v0.1.0 · 2 MB</p>
+      <p class="text-xs text-white/40 mt-2">Windows and Linux builds coming soon</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="max-w-3xl mx-auto px-6 py-16">
+    <h2 class="text-2xl font-bold mb-8 text-center">FAQ</h2>
+    <div class="space-y-6">
+      <details class="border rounded-xl p-4 group" open>
+        <summary class="font-semibold cursor-pointer">Is it really free?</summary>
+        <p class="mt-2 text-sm text-gray-600">Yes. 20 tools are free forever with no limits, no accounts, no ads. Pro unlocks all 44 tools for a one-time $30 payment.</p>
+      </details>
+      <details class="border rounded-xl p-4 group">
+        <summary class="font-semibold cursor-pointer">Do my files get uploaded anywhere?</summary>
+        <p class="mt-2 text-sm text-gray-600">No. Every tool runs 100% on your machine. The app makes zero network calls. Your files, your data, your privacy.</p>
+      </details>
+      <details class="border rounded-xl p-4 group">
+        <summary class="font-semibold cursor-pointer">Does it work offline?</summary>
+        <p class="mt-2 text-sm text-gray-600">Yes. ToolBox works without internet. It's a native desktop app — not a website wrapper.</p>
+      </details>
+      <details class="border rounded-xl p-4 group">
+        <summary class="font-semibold cursor-pointer">Where are my API keys stored?</summary>
+        <p class="mt-2 text-sm text-gray-600">In your operating system's secure keychain (macOS Keychain / Windows Credential Manager). Never in files, never in localStorage.</p>
+      </details>
+      <details class="border rounded-xl p-4 group">
+        <summary class="font-semibold cursor-pointer">What's the tech stack?</summary>
+        <p class="mt-2 text-sm text-gray-600">Tauri 2 (Rust backend) + React 19 + TypeScript. Image processing uses mozjpeg and oxipng for best-in-class compression. Not Electron — 10x smaller and faster.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t">
+    <div class="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div class="text-sm text-gray-500">ToolBox — built with Rust, React, and care.</div>
+      <div class="flex gap-6 text-sm text-gray-500">
+        <a href="https://github.com/shyamala-venkat/toolbox" class="hover:text-gray-900">GitHub</a>
+        <a href="mailto:shyamalavenkatakrish@gmail.com" class="hover:text-gray-900">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
