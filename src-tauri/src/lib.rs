@@ -15,7 +15,7 @@ use commands::{
     file_ops::{read_text_file, stat_file, write_text_file},
     image_ops::{convert_image, get_image_info, read_exif, resize_image, strip_exif},
     keychain::{delete_api_key, get_api_key, get_api_key_summary, store_api_key},
-    preferences::{get_preferences, set_preferences},
+    preferences::{check_preferences_recovery, dismiss_preferences_recovery, get_preferences, set_preferences},
     system::{get_app_version, get_arch, get_platform},
 };
 
@@ -106,6 +106,8 @@ pub fn run() {
             read_exif,
             // preferences
             get_preferences,
+            check_preferences_recovery,
+            dismiss_preferences_recovery,
             set_preferences,
         ])
         .run(tauri::generate_context!())

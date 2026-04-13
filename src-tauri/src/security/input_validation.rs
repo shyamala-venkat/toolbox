@@ -45,7 +45,7 @@ const FORBIDDEN_PREFIXES: &[&str] = &[
 /// Basename that must never be a write target — this is where we persist
 /// user preferences, and a renderer that can rewrite it out-of-band would
 /// bypass the `set_preferences` validation layer entirely.
-const RESERVED_BASENAMES: &[&str] = &["preferences.json"];
+const RESERVED_BASENAMES: &[&str] = &["preferences.json", "preferences.json.bad"];
 
 /// Path shape check used by every file-path validator. Kept private — the
 /// public API always returns a canonicalized `PathBuf`.
@@ -268,6 +268,15 @@ mod tests {
         // forced to pass an absolute or explicitly-relative path.
         let result = validate_writable_file_path("/");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn validate_writable_file_path_rejects_bare_filename() {
+        // A bare filename like "foo.txt" has parent "" which the filter
+        // rejects — callers must use an absolute or explicitly-relative path.
+        let result = validate_writable_file_path("foo.txt");
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "invalid file path");
     }
 
     #[test]

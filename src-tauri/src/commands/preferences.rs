@@ -104,6 +104,27 @@ pub async fn get_preferences(app: tauri::AppHandle) -> Result<UserPreferences, S
     Ok(preferences::load(&dir))
 }
 
+/// Check if a corrupted preferences backup exists. The frontend calls this
+/// on app start and shows a toast so the user knows their settings were reset.
+#[tauri::command]
+pub async fn check_preferences_recovery(app: tauri::AppHandle) -> Result<bool, String> {
+    let dir = resolve_app_data_dir(&app)?;
+    let bad_path = dir.join("preferences.json.bad");
+    Ok(bad_path.exists())
+}
+
+/// Clear the corrupted preferences backup after the user has been notified.
+#[tauri::command]
+pub async fn dismiss_preferences_recovery(app: tauri::AppHandle) -> Result<(), String> {
+    let dir = resolve_app_data_dir(&app)?;
+    let bad_path = dir.join("preferences.json.bad");
+    if bad_path.exists() {
+        std::fs::remove_file(&bad_path)
+            .map_err(|e| format!("failed to remove recovery file: {e}"))?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn set_preferences(
     app: tauri::AppHandle,

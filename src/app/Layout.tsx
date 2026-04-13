@@ -45,6 +45,28 @@ export function Layout() {
     if (!isHydrated) void hydrate();
   }, [isHydrated, hydrate]);
 
+  // Check if preferences were recovered from a corrupted file. If so, show
+  // a toast so the user knows their settings were reset to defaults.
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const { checkPreferencesRecovery, dismissPreferencesRecovery } = await import('@/lib/tauri');
+        const hasRecovery = await checkPreferencesRecovery();
+        if (hasRecovery) {
+          useAppStore.getState().showToast(
+            'Your settings were reset because the preferences file was corrupted. A backup was saved as preferences.json.bad.',
+            'warning',
+          );
+          await dismissPreferencesRecovery();
+        }
+      } catch {
+        // Silently ignore — this is a best-effort notification.
+      }
+    };
+    void check();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Watch the system color scheme for 'system' theme.
   useEffect(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return;

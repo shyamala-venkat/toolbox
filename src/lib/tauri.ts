@@ -96,6 +96,12 @@ export const getPreferences = (): Promise<RustUserPreferences> =>
 export const setPreferences = (prefs: RustUserPreferences): Promise<void> =>
   invoke<void>('set_preferences', { prefs });
 
+export const checkPreferencesRecovery = (): Promise<boolean> =>
+  invoke<boolean>('check_preferences_recovery');
+
+export const dismissPreferencesRecovery = (): Promise<void> =>
+  invoke<void>('dismiss_preferences_recovery');
+
 // ── Image operations ────────────────────────────────────────────────────────
 
 export interface ImageInfo {
