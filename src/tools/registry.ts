@@ -952,12 +952,91 @@ export const getToolById = (id: string): ToolDefinition | undefined =>
 export const getToolsByCategory = (category: string): ToolDefinition[] =>
   toolRegistry.filter(t => t.category === category);
 
+/** Synonym map: search keyword → tool IDs that should match. */
+const SYNONYMS: Record<string, string[]> = {
+  shrink: ['image-compress', 'pdf-compress'],
+  combine: ['pdf-merge'],
+  join: ['pdf-merge'],
+  compress: ['image-compress', 'pdf-compress', 'gzip-tool'],
+  resize: ['image-resize', 'social-image'],
+  convert: ['image-convert', 'unit-converter', 'timestamp-converter', 'number-base', 'color-converter'],
+  format: ['json-formatter', 'sql-formatter', 'xml-formatter'],
+  decode: ['base64', 'url-encoder', 'jwt-decoder', 'html-encoder'],
+  encode: ['base64', 'url-encoder', 'html-encoder'],
+  hash: ['hash-generator', 'checksum-verify'],
+  checksum: ['hash-generator', 'checksum-verify'],
+  password: ['password-gen', 'password-checker'],
+  qr: ['qr-code'],
+  barcode: ['barcode-gen'],
+  zip: ['zip-tool'],
+  archive: ['zip-tool', 'gzip-tool'],
+  pdf: ['pdf-merge', 'pdf-split', 'pdf-compress', 'pdf-to-image', 'pdf-pages', 'pdf-watermark'],
+  image: ['image-resize', 'image-compress', 'image-convert', 'image-crop', 'image-rotate', 'image-watermark', 'image-batch', 'exif-strip', 'social-image'],
+  crop: ['image-crop'],
+  rotate: ['image-rotate'],
+  flip: ['image-rotate'],
+  watermark: ['image-watermark', 'pdf-watermark'],
+  favicon: ['favicon-gen'],
+  color: ['color-converter', 'color-palette'],
+  palette: ['color-palette'],
+  ruler: ['screen-ruler'],
+  measure: ['screen-ruler'],
+  ratio: ['aspect-ratio'],
+  markdown: ['markdown-preview', 'markdown-pdf'],
+  csv: ['csv-viewer', 'csv-json'],
+  json: ['json-formatter', 'json-to-typescript', 'jsonpath-eval', 'yaml-json', 'csv-json'],
+  uuid: ['uuid-generator'],
+  timestamp: ['timestamp-converter', 'epoch-batch'],
+  date: ['date-calculator', 'timestamp-converter'],
+  cron: ['cron-parser'],
+  regex: ['regex-tester'],
+  diff: ['text-diff'],
+  placeholder: ['placeholder-image', 'lorem-ipsum'],
+};
+
+/**
+ * Search tools by query with synonym support.
+ *
+ * Synonym matches surface first, then standard substring matches on
+ * name / description / tags. Empty query returns all tools.
+ */
 export const searchTools = (query: string): ToolDefinition[] => {
   const q = query.toLowerCase().trim();
   if (!q) return toolRegistry;
-  return toolRegistry.filter(t =>
-    t.name.toLowerCase().includes(q) ||
-    t.description.toLowerCase().includes(q) ||
-    t.tags.some(tag => tag.toLowerCase().includes(q))
+
+  const synonymHits = new Set<string>();
+  for (const [keyword, toolIds] of Object.entries(SYNONYMS)) {
+    if (keyword.includes(q) || q.includes(keyword)) {
+      for (const id of toolIds) synonymHits.add(id);
+    }
+  }
+
+  const substringHits = toolRegistry.filter(
+    t =>
+      t.name.toLowerCase().includes(q) ||
+      t.description.toLowerCase().includes(q) ||
+      t.tags.some(tag => tag.includes(q)),
   );
+
+  const seen = new Set<string>();
+  const results: ToolDefinition[] = [];
+
+  for (const id of synonymHits) {
+    if (!seen.has(id)) {
+      const tool = toolRegistry.find(t => t.id === id);
+      if (tool) {
+        results.push(tool);
+        seen.add(id);
+      }
+    }
+  }
+
+  for (const tool of substringHits) {
+    if (!seen.has(tool.id)) {
+      results.push(tool);
+      seen.add(tool.id);
+    }
+  }
+
+  return results;
 };

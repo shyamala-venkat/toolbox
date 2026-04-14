@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 test.describe('Core app navigation', () => {
   test('home page loads with tool grid', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1', { hasText: 'Welcome to ToolBox' })).toBeVisible();
-    // The home page should have tool cards (buttons with class tb-tool-card)
+    // The home page should have a search bar and tool cards
+    await expect(page.getByPlaceholder('What do you want to do')).toBeVisible();
     const toolCards = page.locator('.tb-tool-card');
     await expect(toolCards.first()).toBeVisible();
     const count = await toolCards.count();

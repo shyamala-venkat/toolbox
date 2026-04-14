@@ -11,7 +11,7 @@ import {
   Star,
   Wrench,
 } from 'lucide-react';
-import { toolRegistry } from '@/tools/registry';
+import { toolRegistry, searchTools } from '@/tools/registry';
 import { TOOL_CATEGORIES } from '@/tools/categories';
 import type { ToolCategory, ToolDefinition } from '@/tools/types';
 import { getToolIcon } from '@/lib/icons';
@@ -42,16 +42,7 @@ export function Sidebar() {
 
   const [localQuery, setLocalQuery] = useState('');
 
-  const filteredRegistry = useMemo(() => {
-    const q = localQuery.trim().toLowerCase();
-    if (!q) return toolRegistry;
-    return toolRegistry.filter(
-      (t) =>
-        t.name.toLowerCase().includes(q) ||
-        t.description.toLowerCase().includes(q) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(q)),
-    );
-  }, [localQuery]);
+  const filteredRegistry = useMemo(() => searchTools(localQuery.trim()), [localQuery]);
 
   const byCategory = useMemo(() => {
     const map = new Map<ToolCategory, ToolDefinition[]>();
