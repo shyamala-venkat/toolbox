@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { CommandPalette } from './CommandPalette';
 import { UpdateBanner } from '@/components/UpdateBanner';
+import { ClipboardBanner } from '@/components/ui/ClipboardBanner';
 import { Toast } from '@/components/ui/Toast';
 import { applyThemeToDocument, useAppStore } from '@/stores/appStore';
 import { useSettingsStore } from '@/stores/settingsStore';
@@ -133,6 +134,7 @@ export function Layout() {
       }}
     >
       <UpdateBanner />
+      <ClipboardBanner />
       <div className="flex min-h-0 flex-1">
         <Sidebar />
         <main
