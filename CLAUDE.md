@@ -142,12 +142,48 @@ cd src-tauri && cargo check
 # Rust: lint (treats warnings as errors)
 cd src-tauri && cargo clippy --all-targets -- -D warnings
 
-# Rust: tests (14 tests covering path validators + preferences validation)
+# Rust: tests (15 tests covering path validators + preferences validation)
 cd src-tauri && cargo test
+
+# E2E tests (34 Playwright tests against the Vite dev server)
+npm run test:e2e
 
 # Production build (creates .dmg / .msi / .deb)
 npm run tauri build
 ```
+
+## Testing Rules — Non-Negotiable
+
+**Every code change to the product MUST include corresponding tests.** This is not optional.
+
+### When to write tests
+
+| Change type | Required tests |
+|---|---|
+| **New tool** | At least 2 E2E tests: (1) valid input → correct output, (2) malformed input → no crash + friendly error. Add to `e2e/` directory. |
+| **Bug fix** | Write a test that REPRODUCES the bug first (red), then fix it (green). The test prevents regression. |
+| **New Rust IPC command** | Add a `#[test]` in the relevant `src-tauri/src/commands/*.rs` or `src-tauri/src/security/*.rs` file. |
+| **UI component change** | If the change affects tool behavior (not just styling), add or update the relevant E2E test in `e2e/`. |
+| **New feature (non-tool)** | Add E2E tests for user-visible behavior (e.g., navigation, settings, theme switching). |
+| **Refactor** | Existing tests must still pass. If the refactor changes behavior, update the tests to match. |
+
+### Test infrastructure
+
+- **Rust unit tests**: `cd src-tauri && cargo test` — currently 15 tests covering path validators, preferences validation, symlink write guard.
+- **E2E tests**: `npm run test:e2e` — Playwright against Vite dev server (Chromium headless). Currently 34 tests across 10 files covering navigation, theming, and 8 tools. All pass in ~9 seconds.
+- **Tools that need Rust IPC** (image tools, hash generator) cannot be tested via Playwright — they need the Tauri runtime. Test these manually or via `tauri-driver` in the future.
+- **File-input tools** (PDF tools, CSV viewer) need file dialog simulation — skip in E2E for now, test manually.
+
+### Test file conventions
+
+- E2E tests live in `e2e/<tool-id>.spec.ts` or `e2e/<feature>.spec.ts`
+- Use `aria-label` attributes as selectors where possible (most stable)
+- Wait for debounce after input: `await page.waitForTimeout(300)` or `await expect(locator).not.toBeEmpty()`
+- Each test file should complete in under 5 seconds
+
+### The rule
+
+**No test = no merge.** If you can't write an automated test for a change (e.g., it's purely visual), document WHY in the commit message and describe the manual verification steps you performed.
 
 **Security grep — run after any code change:**
 ```bash
