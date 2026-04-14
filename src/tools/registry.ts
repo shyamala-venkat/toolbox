@@ -46,6 +46,21 @@ const CronParser = lazy(() => import('./cron-parser/CronParser'));
 const UnixPermissions = lazy(() => import('./unix-permissions/UnixPermissions'));
 const JsonPathEval = lazy(() => import('./jsonpath-eval/JsonPathEval'));
 const EpochBatch = lazy(() => import('./epoch-batch/EpochBatch'));
+const AspectRatio = lazy(() => import('./aspect-ratio/AspectRatio'));
+const PasswordChecker = lazy(() => import('./password-checker/PasswordChecker'));
+const PlaceholderImage = lazy(() => import('./placeholder-image/PlaceholderImage'));
+const ColorPalette = lazy(() => import('./color-palette/ColorPalette'));
+const ImageCrop = lazy(() => import('./image-crop/ImageCrop'));
+const ImageRotate = lazy(() => import('./image-rotate/ImageRotate'));
+const ImageWatermark = lazy(() => import('./image-watermark/ImageWatermark'));
+const FaviconGen = lazy(() => import('./favicon-gen/FaviconGen'));
+const PdfWatermark = lazy(() => import('./pdf-watermark/PdfWatermark'));
+const BarcodeGen = lazy(() => import('./barcode-gen/BarcodeGen'));
+const ZipTool = lazy(() => import('./zip-tool/ZipTool'));
+const MarkdownPdf = lazy(() => import('./markdown-pdf/MarkdownPdf'));
+const SocialImage = lazy(() => import('./social-image/SocialImage'));
+const ChecksumVerify = lazy(() => import('./checksum-verify/ChecksumVerify'));
+const ScreenRuler = lazy(() => import('./screen-ruler/ScreenRuler'));
 // === TOOL_IMPORTS_END ===
 
 export const toolRegistry: ToolDefinition[] = [
@@ -716,6 +731,217 @@ export const toolRegistry: ToolDefinition[] = [
     tier: 'pro',
     requiresBackend: false,
     component: EpochBatch,
+  },
+  // --- Consumer Tools (Phase 2) ---
+  {
+    id: 'aspect-ratio',
+    name: 'Aspect Ratio Calculator',
+    description: 'Calculate and convert aspect ratios for images and video',
+    longDescription:
+      'Enter width and height to find the aspect ratio, or enter a ratio and one dimension to ' +
+      'calculate the other. Supports common presets like 16:9, 4:3, and 1:1.',
+    category: 'calculators',
+    tags: ['aspect', 'ratio', 'width', 'height', 'resize', 'dimension', 'proportion'],
+    icon: 'scale',
+    tier: 'free',
+    requiresBackend: false,
+    component: AspectRatio,
+  },
+  {
+    id: 'password-checker',
+    name: 'Password Strength Checker',
+    description: 'Analyze password security with entropy and crack time estimates',
+    longDescription:
+      'Check any password for strength with entropy calculation, crack time estimates at ' +
+      'multiple attack speeds, and common password detection. Nothing is logged or stored.',
+    category: 'crypto',
+    tags: ['password', 'strength', 'security', 'entropy', 'crack', 'checker'],
+    icon: 'shield-check',
+    tier: 'free',
+    requiresBackend: false,
+    component: PasswordChecker,
+  },
+  {
+    id: 'placeholder-image',
+    name: 'Placeholder Image Generator',
+    description: 'Generate placeholder images with custom size, color, and text',
+    longDescription:
+      'Create placeholder images with custom dimensions, background color, text, and text color. ' +
+      'Includes presets for Instagram, YouTube, OG images, and more. Download as PNG.',
+    category: 'generators',
+    tags: ['placeholder', 'image', 'generate', 'dummy', 'size', 'preview'],
+    icon: 'image',
+    tier: 'free',
+    requiresBackend: false,
+    component: PlaceholderImage,
+  },
+  {
+    id: 'color-palette',
+    name: 'Color Palette Generator',
+    description: 'Generate color palettes from any base color',
+    longDescription:
+      'Enter a hex color and generate complementary, analogous, triadic, split-complementary, ' +
+      'and monochromatic palettes. Click any swatch to copy its hex value.',
+    category: 'converters',
+    tags: ['color', 'palette', 'generate', 'complementary', 'analogous', 'triadic', 'scheme'],
+    icon: 'palette',
+    tier: 'free',
+    requiresBackend: false,
+    component: ColorPalette,
+  },
+  {
+    id: 'image-crop',
+    name: 'Image Crop',
+    description: 'Crop images with draggable selection and aspect ratio presets',
+    longDescription:
+      'Upload an image and drag to define a crop area. Supports free-form cropping and ' +
+      'locked aspect ratios (1:1, 16:9, 4:3, 3:2). Download the cropped result as PNG.',
+    category: 'image-tools',
+    tags: ['image', 'crop', 'cut', 'trim', 'aspect', 'ratio'],
+    icon: 'scissors',
+    tier: 'free',
+    requiresBackend: false,
+    component: ImageCrop,
+  },
+  {
+    id: 'image-rotate',
+    name: 'Image Rotate & Flip',
+    description: 'Rotate and flip images with one-click transforms',
+    longDescription:
+      'Rotate images 90°, 180°, or 270° and flip horizontally or vertically. ' +
+      'Transforms apply cumulatively. Download the result at full resolution.',
+    category: 'image-tools',
+    tags: ['image', 'rotate', 'flip', 'mirror', 'turn', 'orientation'],
+    icon: 'rotate-cw',
+    tier: 'free',
+    requiresBackend: false,
+    component: ImageRotate,
+  },
+  {
+    id: 'image-watermark',
+    name: 'Image Watermark',
+    description: 'Add text watermarks to images with full control over style and position',
+    longDescription:
+      'Upload an image and overlay a text watermark. Control font size, color, opacity, ' +
+      'position, and rotation angle. Live preview and full-resolution download.',
+    category: 'image-tools',
+    tags: ['image', 'watermark', 'text', 'overlay', 'protect', 'copyright'],
+    icon: 'stamp',
+    tier: 'pro',
+    requiresBackend: false,
+    component: ImageWatermark,
+  },
+  {
+    id: 'favicon-gen',
+    name: 'Favicon Generator',
+    description: 'Generate a complete favicon set from text, emoji, or image',
+    longDescription:
+      'Create favicons from text, emoji, or an uploaded image. Generates all standard sizes ' +
+      '(16x16 through 192x192) and downloads as a ZIP with correctly named files.',
+    category: 'generators',
+    tags: ['favicon', 'icon', 'generate', 'website', 'browser', 'tab'],
+    icon: 'globe',
+    tier: 'free',
+    requiresBackend: false,
+    component: FaviconGen,
+  },
+  {
+    id: 'pdf-watermark',
+    name: 'PDF Watermark',
+    description: 'Add text watermarks to every page of a PDF',
+    longDescription:
+      'Upload a PDF and add a text watermark to every page. Control text, font size, color, ' +
+      'opacity, rotation, and position. Download the watermarked PDF.',
+    category: 'pdf-tools',
+    tags: ['pdf', 'watermark', 'stamp', 'text', 'overlay', 'protect', 'copyright'],
+    icon: 'stamp',
+    tier: 'pro',
+    requiresBackend: false,
+    component: PdfWatermark,
+  },
+  {
+    id: 'barcode-gen',
+    name: 'Barcode Generator',
+    description: 'Generate Code128, UPC, EAN, and other barcode formats',
+    longDescription:
+      'Generate barcodes in Code128, UPC-A, EAN-13, EAN-8, Code39, and ITF-14 formats. ' +
+      'Auto-detects format from input. Download as PNG or SVG.',
+    category: 'generators',
+    tags: ['barcode', 'generate', 'code128', 'upc', 'ean', 'scan', 'label'],
+    icon: 'scan',
+    tier: 'free',
+    requiresBackend: false,
+    component: BarcodeGen,
+  },
+  {
+    id: 'zip-tool',
+    name: 'ZIP Tool',
+    description: 'Create and extract ZIP archives in your browser',
+    longDescription:
+      'Create ZIP files from multiple files or extract contents from existing ZIP archives. ' +
+      'Runs entirely in your browser — nothing leaves your machine.',
+    category: 'file-tools',
+    tags: ['zip', 'archive', 'compress', 'extract', 'unzip', 'bundle', 'package'],
+    icon: 'archive',
+    tier: 'free',
+    requiresBackend: false,
+    component: ZipTool,
+  },
+  {
+    id: 'markdown-pdf',
+    name: 'Markdown to PDF',
+    description: 'Convert Markdown to a styled PDF document',
+    longDescription:
+      'Write or paste Markdown and export it as a professionally styled PDF. ' +
+      'Live preview with GitHub Flavored Markdown support. Uses print-optimized CSS.',
+    category: 'text',
+    tags: ['markdown', 'pdf', 'export', 'convert', 'document', 'print'],
+    icon: 'file-text',
+    tier: 'pro',
+    requiresBackend: false,
+    component: MarkdownPdf,
+  },
+  {
+    id: 'social-image',
+    name: 'Social Media Resizer',
+    description: 'Resize images to exact social media platform dimensions',
+    longDescription:
+      'Upload an image and resize it to preset dimensions for Instagram, Twitter, LinkedIn, ' +
+      'Facebook, YouTube, and TikTok. Uses the same high-quality Rust image engine.',
+    category: 'image-tools',
+    tags: ['social', 'media', 'resize', 'instagram', 'twitter', 'linkedin', 'facebook', 'youtube', 'tiktok'],
+    icon: 'smartphone',
+    tier: 'free',
+    requiresBackend: true,
+    component: SocialImage,
+  },
+  {
+    id: 'checksum-verify',
+    name: 'File Checksum Verifier',
+    description: 'Verify file integrity by comparing computed and expected hashes',
+    longDescription:
+      'Select a file and paste the expected hash to verify integrity. Auto-detects hash ' +
+      'algorithm from length (MD5, SHA-1, SHA-256, SHA-512). Shows match or mismatch.',
+    category: 'crypto',
+    tags: ['checksum', 'verify', 'hash', 'file', 'integrity', 'md5', 'sha256', 'download'],
+    icon: 'shield-check',
+    tier: 'free',
+    requiresBackend: true,
+    component: ChecksumVerify,
+  },
+  {
+    id: 'screen-ruler',
+    name: 'Screen Ruler',
+    description: 'Measure pixel distances with a draggable on-screen ruler',
+    longDescription:
+      'Drag two handles to measure horizontal, vertical, and diagonal pixel distances. ' +
+      'Useful for checking spacing, sizing, and alignment in design work.',
+    category: 'calculators',
+    tags: ['ruler', 'pixel', 'measure', 'distance', 'screen', 'dimension', 'size'],
+    icon: 'ruler',
+    tier: 'free',
+    requiresBackend: false,
+    component: ScreenRuler,
   },
   // === TOOL_REGISTRATIONS_END ===
 ];
