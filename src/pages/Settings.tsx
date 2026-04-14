@@ -11,6 +11,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { useToolStore } from '@/stores/toolStore';
 import { getAppVersion } from '@/lib/tauri';
 import { APP_VERSION } from '@/lib/constants';
+import { ACCENT_PRESETS } from '@/lib/accents';
 
 // How long the "reset all preferences" confirm state stays armed before it
 // auto-reverts. Matches the ApiKeyInput delete confirm — a dangerous action
@@ -137,6 +138,47 @@ export function Settings() {
                   {opt}
                 </div>
               </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+            Accent color
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {ACCENT_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => update({ accentColor: preset.id })}
+                title={preset.label}
+                aria-label={`Accent color: ${preset.label}`}
+                aria-pressed={preferences.accentColor === preset.id}
+                className="flex h-9 items-center gap-2 rounded px-3 text-xs font-medium transition-colors"
+                style={{
+                  backgroundColor:
+                    preferences.accentColor === preset.id
+                      ? 'var(--accent-subtle)'
+                      : 'var(--bg-secondary)',
+                  border: `2px solid ${
+                    preferences.accentColor === preset.id
+                      ? preset.swatch
+                      : 'var(--border-primary)'
+                  }`,
+                  color:
+                    preferences.accentColor === preset.id
+                      ? 'var(--accent)'
+                      : 'var(--text-primary)',
+                  borderRadius: 'var(--radius-md)',
+                }}
+              >
+                <span
+                  className="h-3.5 w-3.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: preset.swatch }}
+                />
+                {preset.label}
+              </button>
             ))}
           </div>
         </div>

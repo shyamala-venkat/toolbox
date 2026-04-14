@@ -88,6 +88,7 @@ export interface RustUserPreferences {
   compact_mode: boolean;
   minimize_to_tray: boolean;
   monospace_font_size: number;
+  accent_color: string;
   tool_defaults: Record<string, unknown>;
 }
 

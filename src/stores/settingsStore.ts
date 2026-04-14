@@ -36,6 +36,7 @@ export interface UserPreferences {
   compactMode: boolean;
   minimizeToTray: boolean;
   monospaceFontSize: number;
+  accentColor: string;
   toolDefaults: Record<string, unknown>;
 }
 
@@ -51,6 +52,7 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   compactMode: false,
   minimizeToTray: true,
   monospaceFontSize: 14,
+  accentColor: 'teal',
   toolDefaults: {},
 };
 
@@ -66,6 +68,7 @@ const fromRust = (r: RustUserPreferences): UserPreferences => ({
   compactMode: r.compact_mode,
   minimizeToTray: r.minimize_to_tray,
   monospaceFontSize: r.monospace_font_size,
+  accentColor: r.accent_color || 'teal',
   toolDefaults:
     r.tool_defaults && typeof r.tool_defaults === 'object'
       ? (r.tool_defaults as Record<string, unknown>)
@@ -84,6 +87,7 @@ const toRust = (p: UserPreferences): RustUserPreferences => ({
   compact_mode: p.compactMode,
   minimize_to_tray: p.minimizeToTray,
   monospace_font_size: p.monospaceFontSize,
+  accent_color: p.accentColor,
   tool_defaults: p.toolDefaults,
 });
 

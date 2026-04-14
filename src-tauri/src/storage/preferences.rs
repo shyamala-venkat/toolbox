@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 const PREFERENCES_FILENAME: &str = "preferences.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct UserPreferences {
     pub theme: String,
     pub sidebar_collapsed: bool,
@@ -22,6 +23,7 @@ pub struct UserPreferences {
     pub compact_mode: bool,
     pub minimize_to_tray: bool,
     pub monospace_font_size: u32,
+    pub accent_color: String,
     pub tool_defaults: serde_json::Value,
 }
 
@@ -39,6 +41,7 @@ impl Default for UserPreferences {
             compact_mode: false,
             minimize_to_tray: true,
             monospace_font_size: 14,
+            accent_color: "teal".to_string(),
             tool_defaults: serde_json::Value::Object(serde_json::Map::new()),
         }
     }

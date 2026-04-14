@@ -6,6 +6,7 @@ import { UpdateBanner } from '@/components/UpdateBanner';
 import { ClipboardBanner } from '@/components/ui/ClipboardBanner';
 import { Toast } from '@/components/ui/Toast';
 import { applyThemeToDocument, useAppStore } from '@/stores/appStore';
+import { applyAccent } from '@/lib/accents';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useFavoriteTools } from '@/stores/toolStore';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
@@ -82,14 +83,16 @@ export function Layout() {
   }, [setResolvedTheme]);
 
   // Apply the resolved theme to <html> and persist the user choice.
+  const accentColor = useSettingsStore((s) => s.preferences.accentColor);
   useEffect(() => {
     applyThemeToDocument(resolvedTheme);
+    applyAccent(accentColor);
     try {
       localStorage.setItem('tb-theme', theme);
     } catch {
       // localStorage can be disabled; we already have Rust persistence.
     }
-  }, [resolvedTheme, theme]);
+  }, [resolvedTheme, theme, accentColor]);
 
   // Round-trip theme choice into settingsStore (debounced save).
   useEffect(() => {
