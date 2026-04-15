@@ -6,21 +6,21 @@
 
 ## What Is ToolBox
 
-A **local-first desktop utility app** (macOS + Windows + Linux) that bundles 20+ developer and productivity tools into a single, fast, native application. Built with Tauri 2 (Rust backend) + React 19 (TypeScript frontend).
+A **local-first desktop utility app** (macOS + Windows + Linux) that bundles **59 tools** into a single, fast, native application. Built with Tauri 2 (Rust backend) + React 19 (TypeScript frontend).
 
-**The pitch**: Every developer pastes sensitive data — JWT tokens, API keys, JSON payloads, SQL queries, private code — into random websites to format/decode/convert them. ToolBox does it all locally. Nothing leaves the machine. Ever.
+**The pitch**: People paste sensitive data — tax returns, contracts, personal photos, API keys — into random websites to merge PDFs, resize images, or decode tokens. ToolBox does it all locally. Nothing leaves the machine. Ever.
 
-**Target users**: Software engineers, DevOps, technical writers, freelance developers, and security-conscious power users.
+**Target users**: Non-technical users who rely on web tools (SmallPDF, iLovePDF, TinyPNG) for everyday tasks, plus software engineers, DevOps, and security-conscious power users.
 
 ---
 
 ## Business Model — Read This Before Making UX Decisions
 
-**Pricing**: $4/month OR $30 one-time lifetime purchase.
+**Pricing**: $3.99/month OR $29.99 one-time lifetime purchase (user's choice).
 
 **Tier structure**:
-- **Free tier** (10 tools): JSON Formatter, Base64, UUID Generator, Hash Generator, Timestamp Converter, URL Encoder, JWT Decoder, Color Converter, Text Case Converter, Lorem Ipsum Generator
-- **Pro tier** ($4/mo or $30 lifetime): All 20 tools — adds Regex Tester, Text Diff, SQL Formatter, YAML/JSON, XML Formatter, HTML Encoder, Number Base, Password Generator, QR Code Generator, GZip
+- **Free tier** (33 tools): All consumer essentials — PDF Merge, Image Resize/Compress/Convert/Crop/Rotate, QR Code, Barcode, ZIP, Color Palette, Favicon Generator, Password Checker, JSON Formatter, Base64, UUID, Hash, Timestamp, URL Encoder, JWT Decoder, Color Converter, Text Case, Lorem Ipsum, Word Counter, Text Cleanup, Unit Converter, Date Calculator, Aspect Ratio, Placeholder Image, Screen Ruler, Checksum Verifier, Social Media Resizer, and more.
+- **Pro tier** ($3.99/mo or $29.99 lifetime): All 59 tools — adds PDF Split/Compress/Pages/Watermark/ToImage, Image Watermark/Batch, EXIF Strip, Regex Tester, Text Diff, SQL Formatter, YAML/JSON, XML Formatter, HTML Encoder/Preview, Number Base, Password Generator, GZip, Markdown Preview/PDF, CSV Viewer/JSON, JSON-to-TypeScript, JSONPath, Epoch Batch, Cron Parser, Backslash Escape.
 
 **UX implications of the business model**:
 - The free-to-paid upgrade must be **smooth and non-annoying**. No pop-ups. No nagging. Pro tools show a subtle lock icon; clicking opens a clean upgrade prompt.
@@ -90,8 +90,8 @@ This is non-negotiable because:
 | Frontend | React 19, TypeScript (strict + `noUncheckedIndexedAccess`), Vite 6, Tailwind 4, Zustand 5 |
 | Backend | Rust (stable), Tauri 2.1, Tokio, serde, keyring |
 | Icons | Lucide React (curated subset in `src/lib/icons.ts`) |
-| Tool libs | `sql-formatter`, `js-yaml` (with `JSON_SCHEMA`), `qrcode`, `diff@8` |
-| Testing | Cargo test (14 Rust tests), `npm run build` as type-check gate |
+| Tool libs | `sql-formatter`, `js-yaml` (with `JSON_SCHEMA`), `qrcode`, `diff@8`, `pdf-lib`, `pdfjs-dist`, `fflate`, `marked`, `dompurify`, `papaparse`, `jsbarcode`, `jsonpath-plus`, `cronstrue` |
+| Testing | Cargo test (14 Rust tests), Playwright E2E (71 tests), `npm run build` as type-check gate |
 
 **What NOT to use**: No Electron. No Redux/MobX. No CSS-in-JS. No SSR. No external APIs from core tools. No ORM. No new dependencies without clear justification — every dep is an attack surface.
 
@@ -116,7 +116,7 @@ src/                            # React frontend
 │   ├── tool/                   # ToolPage wrapper, InputOutputLayout, error boundary
 │   └── settings/               # ApiKeyInput (masked, reveal-with-timeout)
 ├── tools/                      # === EACH TOOL IS A SELF-CONTAINED FOLDER ===
-│   ├── registry.ts             # All 20 tools registered with lazy() imports
+│   ├── registry.ts             # All 59 tools registered with lazy() imports + synonym search
 │   ├── types.ts                # ToolDefinition, ToolMeta, ToolCategory
 │   └── <tool-id>/              # meta.ts + Component.tsx (+ optional helpers)
 ├── pages/                      # Home, AllTools, Settings, NotFound, ToolRoute
@@ -169,8 +169,8 @@ npm run tauri build
 
 ### Test infrastructure
 
-- **Rust unit tests**: `cd src-tauri && cargo test` — currently 15 tests covering path validators, preferences validation, symlink write guard.
-- **E2E tests**: `npm run test:e2e` — Playwright against Vite dev server (Chromium headless). Currently 34 tests across 10 files covering navigation, theming, and 8 tools. All pass in ~9 seconds.
+- **Rust unit tests**: `cd src-tauri && cargo test` — 14 tests covering path validators, preferences validation, symlink write guard.
+- **E2E tests**: `npm run test:e2e` — Playwright against Vite dev server (Chromium headless). 71 tests across 24 files covering navigation, theming, home screen, and 22+ tools. All pass in ~13 seconds.
 - **Tools that need Rust IPC** (image tools, hash generator) cannot be tested via Playwright — they need the Tauri runtime. Test these manually or via `tauri-driver` in the future.
 - **File-input tools** (PDF tools, CSV viewer) need file dialog simulation — skip in E2E for now, test manually.
 
@@ -240,7 +240,7 @@ These rules apply to EVERY file, EVERY commit, EVERY tool. No exceptions.
 - **Debounce input processing.** Use `useDebounce(value, 150)` (or 200ms for expensive operations). Never process on every keystroke.
 - **Graceful error handling.** Catch all errors from parsing/processing. Show friendly inline messages via the tool's own error state or `useAppStore.getState().showToast(message, 'error')`. Never let an unhandled exception crash the tool — the `ToolPage` error boundary is a last resort, not a primary error handling strategy.
 - **Both light and dark mode.** Use CSS variables from `themes.css` only. Test in both themes.
-- **No new dependencies** without explicit justification. 16 of 20 tools use zero third-party libraries. Browser-native APIs are preferred.
+- **No new dependencies** without explicit justification. Most tools use zero third-party libraries (Canvas API, Web Workers, browser-native APIs preferred). See `DEPENDENCIES.md` for the full mapping.
 
 ---
 
@@ -299,27 +299,34 @@ Before any PR is merged or code is considered done, verify:
 | Atomic preferences write | `preferences.rs` writes to `.tmp` then renames. A crash mid-write can't corrupt the file. Parse failures rename to `.bad` for recovery. |
 | Native Edit menu in Tauri | macOS requires a native Edit menu for Cmd+V/C/X/A to reach the webview. Without it, paste doesn't work. |
 | `JSON_SCHEMA` for YAML | Default js-yaml schema enables `<<` merge keys which allow prototype pollution. We always use the safe `JSON_SCHEMA`. |
+| Synonym search over Fuse.js | For <200 tools, a synonym `Map` + substring match is simpler, zero-dep, and has no failure mode. Fuse.js would violate the dependency policy. |
+| Clipboard poll-on-focus | Only reads clipboard when the app window is focused. Stops on blur. Zero CPU when backgrounded, respects privacy. |
+| Sensitive content filter | Clipboard detection silently skips passwords, API keys, bearer tokens, private keys. Even with opt-in, reading sensitive content violates the security-first principle. |
+| Accent presets over single color | Users pick their own accent from 8 presets. No more "AI purple" default. CSS variables update at runtime. |
+| pdfjs buffer `.slice(0)` | pdfjs-dist transfers ArrayBuffers to its web worker, detaching the original. Every `getDocument()` call gets a `.slice(0)` copy so the stored buffer stays usable. |
 
 ---
 
-## Current State (v0.1.0)
+## Current State (v0.2.0)
 
-- **20 tools** shipped and reviewed (2 independent code reviews + 2 hardening passes)
-- **14 Rust unit tests** covering path validators and preferences validation
-- **0 known CRITICAL or HIGH issues**
-- **7 LOW polish items** tracked (see review history in git log)
+- **59 tools** shipped (33 free, 26 pro) across 12 categories
+- **71 Playwright E2E tests** across 24 spec files, **14 Rust unit tests**
+- **Consumer-friendly home screen** with category cards, synonym search, popular tools grid, and privacy badge
+- **Clipboard auto-detect** with file path + text pattern matching, sensitive content filter, poll-on-focus
+- **8 accent color presets** (default: teal) — user-selectable in Settings
+- **System tray / menu bar mode** with global shortcut (Cmd+Shift+T)
+- **Auto-updater infrastructure** scaffolded
+- **CI/CD release workflow** (`.github/workflows/release.yml`)
 - **macOS arm64 binary** released as `ToolBox_0.1.0_aarch64.dmg`
 - **Private repo**: `shyamala-venkat/toolbox`
 
 ### What's NOT built yet (future phases)
-- Payment/subscription system (Stripe or Paddle integration)
-- Auto-updater
+- Payment/subscription system ($3.99/mo + $29.99 lifetime via Stripe or Paddle)
+- Marketing site (Astro static site with SEO landing pages per tool)
 - Plugin/extension system for third-party tools
-- Sidecar binaries (FFmpeg, Pandoc)
+- Sidecar binaries (FFmpeg, Pandoc) for audio/video/OCR tools
 - AI-powered tools (BYOK keychain is ready)
-- System tray / menu bar mode
-- CI/CD pipeline (`.github/workflows/` is scaffolded but empty)
-- Cross-platform release builds (currently macOS arm64 only)
+- Cross-platform release builds (currently macOS arm64 only — Windows + Linux planned)
 - i18n / localization
 
 ---
@@ -332,7 +339,8 @@ Before any PR is merged or code is considered done, verify:
 | `DEPENDENCIES.md` | Tool-to-dependency mapping, CVE history, update procedure |
 | `README.md` | Public-facing project description |
 | `src/tools/types.ts` | `ToolDefinition`, `ToolMeta`, `ToolCategory` type contracts |
-| `src/tools/registry.ts` | All 20 tools registered with lazy imports + insertion markers |
+| `src/tools/registry.ts` | All 59 tools registered with lazy imports + synonym search |
+| `src/lib/accents.ts` | 8 accent color presets + runtime CSS variable application |
 | `src/lib/tauri.ts` | Type-safe IPC wrappers for every Rust command |
 | `src/lib/icons.ts` | Curated Lucide icon registry (~60 icons) |
 | `src/styles/themes.css` | All CSS variables for both light and dark themes |

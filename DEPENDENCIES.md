@@ -12,6 +12,15 @@ Tool-to-dependency mapping for ToolBox. Updated when tools or dependencies chang
 | YAML ↔ JSON | `js-yaml` | 4.1.1 | `load()`, `loadAll()`, `dump()` with `JSON_SCHEMA` | **Must use `JSON_SCHEMA`** on both load and dump to prevent prototype pollution via `<<` merge keys (CVE patched in 4.1.1). |
 | QR Code Generator | `qrcode` | 1.5.4 | `QRCode.toDataURL()`, `QRCode.toString({ type: 'svg' })` | PNG via data URL, SVG via string. |
 | Text Diff | `diff` | 8.0.4 | `diffLines()`, `diffWords()`, `diffWordsWithSpace()`, `diffChars()` | v8 breaking change: `diffWords` no longer accepts `{ ignoreWhitespace }` — use `diffWordsWithSpace` instead. CVE patched in 8.0.4. |
+| PDF Merge/Split/Compress/Pages/Watermark | `pdf-lib` | 1.17.1 | `PDFDocument.load()`, `.create()`, `.copyPages()`, `.embedFont()`, `.save()` | Pure JS PDF manipulation. Used by 5 PDF tools. |
+| PDF to Image, PDF Pages (thumbnails) | `pdfjs-dist` | 4.9.155 | `getDocument()`, `page.render()` | PDF rendering to canvas. **Must `.slice(0)` the ArrayBuffer before each `getDocument()` call** — pdfjs transfers the buffer to its web worker, detaching the original. |
+| ZIP Tool, Favicon Generator | `fflate` | 0.8.2 | `zipSync()`, `unzipSync()` | Fast, lightweight ZIP compression/decompression. Also used for multi-file downloads. |
+| Markdown Preview, Markdown to PDF | `marked` | 15.0.7 | `marked.parse()` | GitHub Flavored Markdown rendering. Always sanitize output with DOMPurify before rendering. |
+| Markdown Preview, Markdown to PDF, HTML Preview | `dompurify` | 3.3.3 | `DOMPurify.sanitize()` | HTML sanitization. **Required** before any `dangerouslySetInnerHTML` usage. |
+| CSV Viewer, CSV ↔ JSON | `papaparse` | 5.5.2 | `Papa.parse()`, `Papa.unparse()` | CSV parsing with delimiter auto-detection. |
+| Barcode Generator | `jsbarcode` | 3.11.6 | `JsBarcode(svgElement, value, { format })` | Code128, UPC-A, EAN-13, EAN-8, Code39, ITF-14. |
+| JSONPath Evaluator | `jsonpath-plus` | 10.3.0 | `JSONPath({ path, json })` | Full JSONPath spec with filters, wildcards, recursive descent. |
+| Cron Parser | `cronstrue` | 2.52.0 | `cronstrue.toString(expression)` | Cron expression → human-readable description. |
 
 ### Framework and infrastructure
 
@@ -27,6 +36,9 @@ Tool-to-dependency mapping for ToolBox. Updated when tools or dependencies chang
 | `@tauri-apps/plugin-dialog` | 2.2.0 | Open/save file dialogs |
 | `@tauri-apps/plugin-fs` | 2.2.0 | Filesystem (scoped to app data dir) |
 | `@tauri-apps/plugin-os` | 2.2.0 | Platform/arch detection |
+| `@tauri-apps/plugin-global-shortcut` | 2.3.1 | Global keyboard shortcut (Cmd+Shift+T) |
+| `@tauri-apps/plugin-process` | 2.3.1 | Process management for system tray |
+| `@tauri-apps/plugin-updater` | 2.10.1 | Auto-updater infrastructure |
 
 ### Dev dependencies
 
@@ -67,28 +79,48 @@ Tool-to-dependency mapping for ToolBox. Updated when tools or dependencies chang
 | `serde_json` | 1.x | JSON serialization |
 | `tokio` | 1.43.0 | Async runtime (rt-multi-thread, fs, io-util, sync, macros) |
 
-## Tools with zero third-party dependencies (16 of 20)
+## Tools with zero third-party dependencies
 
-These tools use only browser-native APIs and hand-rolled logic:
+These tools use only browser-native APIs, Canvas API, or Rust IPC:
 
-| Tool | Key browser APIs used |
+| Tool | Key APIs used |
 |---|---|
 | JSON Formatter | `JSON.parse`, `JSON.stringify` |
 | Base64 | `TextEncoder`, `TextDecoder`, `btoa`, `atob` |
 | UUID Generator | `crypto.randomUUID()`, `crypto.getRandomValues()` |
 | Timestamp Converter | `Date`, `Intl.DateTimeFormat`, `Intl.RelativeTimeFormat` |
-| URL Encoder | `encodeURIComponent`, `decodeURIComponent`, `encodeURI`, `decodeURI` |
-| JWT Decoder | `TextDecoder`, `atob` (base64url variant) |
+| URL Encoder | `encodeURIComponent`, `decodeURIComponent` |
+| JWT Decoder | `TextDecoder`, `atob` (base64url) |
 | HTML Encoder | Hand-rolled entity lookup table |
 | GZip | `CompressionStream`, `DecompressionStream` (native) |
 | Number Base | `BigInt` |
 | Color Converter | Hand-rolled math (RGB ↔ HSL ↔ HSB ↔ CMYK) |
+| Color Palette | HSL math (hue rotation, lightness adjustment) |
 | Text Case | Hand-rolled tokenizer + case formatters |
 | Lorem Ipsum | Embedded word dictionary + `crypto.getRandomValues()` |
 | Password Generator | `crypto.getRandomValues()` |
-| Hash Generator (text mode) | Rust IPC (uses Cargo crates above) |
+| Password Checker | Entropy math + inline common password list |
+| Hash Generator | Rust IPC (sha2, sha1, md-5, crc32fast) |
 | Regex Tester | `RegExp` in a Web Worker |
 | XML Formatter | `DOMParser`, `XMLSerializer` |
+| Image Crop | Canvas API (`drawImage`, `toBlob`) |
+| Image Rotate/Flip | Canvas API (`translate`, `rotate`, `scale`) |
+| Image Watermark | Canvas API (`globalAlpha`, `fillText`) |
+| Placeholder Image | Canvas API (text rendering, `toBlob`) |
+| Aspect Ratio | Pure math (GCD) |
+| Screen Ruler | SVG + pointer events |
+| Word Counter | String splitting + counting |
+| Text Cleanup | String manipulation |
+| Unit Converter | Lookup tables + math |
+| Date Calculator | `Date`, `Intl` APIs |
+| Unix Permissions | Bitwise operations |
+| Backslash Escape | Hand-rolled escape/unescape |
+| Epoch Batch | `Date` constructor |
+| Image Resize/Compress/Convert | Rust IPC (`image` crate) |
+| EXIF Strip | Rust IPC (`image` crate) |
+| Image Batch | Rust IPC (`image` crate) |
+| Social Media Resizer | Rust IPC (reuses `resizeImage`) |
+| Checksum Verifier | Rust IPC (reuses `hashFile`) |
 
 ## Version pinning policy
 
@@ -123,7 +155,10 @@ npm run build                                    # tsc strict + vite
 cd src-tauri && cargo check                      # Rust compilation
 cd src-tauri && cargo clippy --all-targets -- -D warnings
 cd src-tauri && cargo test                       # 14 tests
+npm run test:e2e                                 # 71 E2E tests
 ```
 
 When updating `js-yaml`: verify `JSON_SCHEMA` is still used everywhere. Grep: `rg 'JSON_SCHEMA' src/tools/yaml-json/`.
 When updating `diff`: check for breaking API changes in the changelog — v7→v8 already broke `diffWords`.
+When updating `pdfjs-dist`: verify buffer `.slice(0)` is still needed (check if pdfjs stopped transferring ArrayBuffers to worker).
+When updating `jsbarcode`: verify format validation still works (UPC/EAN digit counts, Code39 character set).
