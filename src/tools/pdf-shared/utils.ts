@@ -120,7 +120,7 @@ export async function renderPageToDataUrl(
   scale: number = 1,
 ): Promise<string> {
   const pdfjsLib = await getPdfjs();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data.slice(0)) }).promise;
   const page = await pdf.getPage(pageNum);
   const viewport = page.getViewport({ scale });
 
@@ -151,7 +151,7 @@ export async function renderPageToImage(
   quality: number = 0.92,
 ): Promise<string> {
   const pdfjsLib = await getPdfjs();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data.slice(0)) }).promise;
   const page = await pdf.getPage(pageNum);
   const viewport = page.getViewport({ scale });
 
@@ -178,7 +178,7 @@ export async function renderPageToImage(
  */
 export async function getPdfPageCount(data: ArrayBuffer): Promise<number> {
   const pdfjsLib = await getPdfjs();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data.slice(0)) }).promise;
   const count = pdf.numPages;
   pdf.destroy();
   return count;
@@ -193,7 +193,7 @@ export async function renderThumbnails(
   scale: number = 0.3,
 ): Promise<Map<number, string>> {
   const pdfjsLib = await getPdfjs();
-  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data) }).promise;
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(data.slice(0)) }).promise;
   const results = new Map<number, string>();
 
   for (const pageNum of pageNumbers) {

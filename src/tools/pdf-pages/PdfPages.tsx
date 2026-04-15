@@ -93,7 +93,7 @@ function PdfPages() {
 
         // Get page count and render thumbnails with pdfjs
         const pdfjsLib = await getPdfjs();
-        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
         const count = pdf.numPages;
 
         const entries: PageEntry[] = [];

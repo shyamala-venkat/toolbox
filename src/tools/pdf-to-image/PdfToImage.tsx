@@ -96,7 +96,9 @@ function PdfToImage() {
       try {
         const buf = await f.arrayBuffer();
         const pdfjsLib = await getPdfjs();
-        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+        // Pass a copy — pdfjs transfers the buffer to its web worker, detaching
+        // the original. We need to keep `buf` intact for subsequent renders.
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)) }).promise;
         setPageCount(pdf.numPages);
         setBuffer(buf);
         pdf.destroy();
@@ -143,7 +145,7 @@ function PdfToImage() {
     const render = async () => {
       try {
         const pdfjsLib = await getPdfjs();
-        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
         const scaleNum = parseFloat(scale);
         const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
         const results: PagePreview[] = [];
@@ -210,7 +212,7 @@ function PdfToImage() {
       if (!buffer) return;
       try {
         const pdfjsLib = await getPdfjs();
-        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
         const page = await pdf.getPage(pageNum);
         const scaleNum = parseFloat(scale);
         const viewport = page.getViewport({ scale: scaleNum });
@@ -252,7 +254,7 @@ function PdfToImage() {
 
     try {
       const pdfjsLib = await getPdfjs();
-      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer.slice(0)) }).promise;
       const scaleNum = parseFloat(scale);
       const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
       const ext = format === 'jpg' ? 'jpg' : 'png';
