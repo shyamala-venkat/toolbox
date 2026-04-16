@@ -7,3 +7,6 @@ src-tauri/target/
 *.log
 .env*
 src-tauri/gen/
+.gstack/
+docs/superpowers/
+test-results/

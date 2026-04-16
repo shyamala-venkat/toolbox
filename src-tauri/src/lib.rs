@@ -114,16 +114,22 @@ pub fn run() {
             set_preferences,
         ])
         .setup(|app| {
-            // ── Tray icon ────────────────────────────────────────────────
+            // ── Tray icon (created purely via TrayIconBuilder) ───────────
             let show_item = MenuItem::with_id(app, "show", "Show ToolBox", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit ToolBox", true, None::<&str>)?;
             let tray_menu = Menu::with_items(app, &[&show_item, &separator, &quit_item])?;
 
-            TrayIconBuilder::new()
-                .icon(app.default_window_icon().cloned().expect("app icon must exist"))
-                .menu(&tray_menu)
+            // 44x44 retina icon decoded via Tauri's image-png feature.
+            let icon = tauri::image::Image::from_bytes(
+                include_bytes!("../icons/tray-icon@2x.png"),
+            )?;
+
+            let _tray = TrayIconBuilder::with_id("main")
+                .icon(icon)
                 .tooltip("ToolBox")
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| {
                     match event.id().as_ref() {
                         "quit" => {
@@ -133,6 +139,7 @@ pub fn run() {
                             if let Some(window) = app.get_webview_window("main") {
                                 let _ = window.show();
                                 let _ = window.set_focus();
+
                             }
                         }
                         _ => {}
@@ -149,9 +156,11 @@ pub fn run() {
                         if let Some(window) = app.get_webview_window("main") {
                             if window.is_visible().unwrap_or(false) {
                                 let _ = window.hide();
+
                             } else {
                                 let _ = window.show();
                                 let _ = window.set_focus();
+
                             }
                         }
                     }
@@ -170,9 +179,13 @@ pub fn run() {
                     if let Some(window) = app.get_webview_window("main") {
                         if window.is_visible().unwrap_or(false) {
                             let _ = window.hide();
+                            #[cfg(target_os = "macos")]
+                            let _ = app.set_activation_policy(tauri::ActivationPolicy::Accessory);
                         } else {
                             let _ = window.show();
                             let _ = window.set_focus();
+                            #[cfg(target_os = "macos")]
+                            let _ = app.set_activation_policy(tauri::ActivationPolicy::Regular);
                         }
                     }
                 }
@@ -192,6 +205,7 @@ pub fn run() {
                 if should_hide {
                     api.prevent_close();
                     let _ = window.hide();
+
                 }
             }
         })
