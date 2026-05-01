@@ -42,7 +42,7 @@ interface DrawerProps {
   currentInput?: string;
 }
 
-const RAIL_WIDTH = 32;
+const RAIL_WIDTH = 56;
 const EXPANDED_WIDTH = 300;
 const DETAIL_WIDTH = 640;
 

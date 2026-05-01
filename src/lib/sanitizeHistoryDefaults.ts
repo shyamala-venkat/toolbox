@@ -27,7 +27,13 @@ export interface HistoryDefaults {
 }
 
 export const DEFAULT_HISTORY_DEFAULTS: HistoryDefaults = {
-  drawerExpanded: false,
+  // Open by default — discovery beats minimalism. The plan-design-review
+  // chose this; an outside-voice review pushed back for "preserves wide-
+  // editor horizontal space" and we briefly accepted that, but real user
+  // feedback confirmed the original choice: a thin rail at the right edge
+  // is invisible and broken-feeling. New users see the drawer; anyone who
+  // wants the space can collapse explicitly.
+  drawerExpanded: true,
   paused: false,
   retention: '7d',
   firstBlockToastDismissed: false,

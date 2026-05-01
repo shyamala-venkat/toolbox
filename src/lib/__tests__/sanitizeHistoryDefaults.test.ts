@@ -8,7 +8,7 @@ describe('sanitizeHistoryDefaults', () => {
   it('returns defaults for null', () => {
     const result = sanitizeHistoryDefaults(null);
     expect(result).toEqual({
-      drawerExpanded: false,
+      drawerExpanded: true,
       paused: false,
       retention: '7d',
       firstBlockToastDismissed: false,
@@ -32,7 +32,7 @@ describe('sanitizeHistoryDefaults', () => {
   });
 
   it('returns defaults for an array', () => {
-    expect(sanitizeHistoryDefaults([1, 2, 3]).drawerExpanded).toBe(false);
+    expect(sanitizeHistoryDefaults([1, 2, 3]).drawerExpanded).toBe(true);
   });
 
   it('passes through a fully valid object', () => {
@@ -54,8 +54,8 @@ describe('sanitizeHistoryDefaults', () => {
     expect(sanitizeHistoryDefaults({ retention: 7 }).retention).toBe('7d');
   });
 
-  it('coerces a non-bool drawerExpanded to default (false)', () => {
-    expect(sanitizeHistoryDefaults({ drawerExpanded: 'yes' }).drawerExpanded).toBe(false);
+  it('coerces a non-bool drawerExpanded to default (true)', () => {
+    expect(sanitizeHistoryDefaults({ drawerExpanded: 'yes' }).drawerExpanded).toBe(true);
   });
 
   it('coerces a non-bool paused to default (false)', () => {

@@ -37,7 +37,10 @@ pub struct HistoryPreferences {
 impl Default for HistoryPreferences {
     fn default() -> Self {
         Self {
-            drawer_expanded: false,
+            // Open by default. See the matching note in
+            // src/lib/sanitizeHistoryDefaults.ts — discovery beats
+            // minimalism, and a thin rail is invisible.
+            drawer_expanded: true,
             paused: false,
             retention: "7d".to_string(),
             first_block_toast_dismissed: false,
@@ -232,7 +235,8 @@ mod tests {
         let prefs_out = load(tmp.path());
         // Defaults round-trip cleanly.
         assert_eq!(prefs_out.history.retention, "7d");
-        assert!(!prefs_out.history.drawer_expanded);
+        // Default is now expanded — discovery beats minimalism.
+        assert!(prefs_out.history.drawer_expanded);
         assert!(!prefs_out.history.paused);
     }
 
