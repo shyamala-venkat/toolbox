@@ -12,6 +12,7 @@ export type ToolCategory =
   | 'pdf-tools'
   | 'image-tools'
   | 'file-tools'
+  | 'finance'
   | 'calculators';
 
 export interface ClipboardDetection {

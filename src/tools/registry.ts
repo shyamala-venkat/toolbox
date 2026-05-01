@@ -61,6 +61,15 @@ const MarkdownPdf = lazy(() => import('./markdown-pdf/MarkdownPdf'));
 const SocialImage = lazy(() => import('./social-image/SocialImage'));
 const ChecksumVerify = lazy(() => import('./checksum-verify/ChecksumVerify'));
 const ScreenRuler = lazy(() => import('./screen-ruler/ScreenRuler'));
+const TipSplitter = lazy(() => import('./finance/tip-splitter/TipSplitter'));
+const LoanEmi = lazy(() => import('./finance/loan-emi/LoanEmi'));
+const CompoundInterest = lazy(() => import('./finance/compound-interest/CompoundInterest'));
+const CurrencyConverter = lazy(() => import('./finance/currency-converter/CurrencyConverter'));
+const ExpenseSplitter = lazy(() => import('./finance/expense-splitter/ExpenseSplitter'));
+const Mortgage = lazy(() => import('./finance/mortgage/Mortgage'));
+const Retirement = lazy(() => import('./finance/retirement/Retirement'));
+const TaxBracket = lazy(() => import('./finance/tax-bracket/TaxBracket'));
+const Paycheck = lazy(() => import('./finance/paycheck/Paycheck'));
 // === TOOL_IMPORTS_END ===
 
 export const toolRegistry: ToolDefinition[] = [
@@ -943,6 +952,182 @@ export const toolRegistry: ToolDefinition[] = [
     requiresBackend: false,
     component: ScreenRuler,
   },
+  // --- Finance ---
+  {
+    id: 'tip-splitter',
+    name: 'Tip Splitter',
+    description: 'Split a bill with tip across any number of people.',
+    longDescription:
+      'Enter the bill, tip percentage, and party size. Get the per-person amount instantly. ' +
+      'Runs entirely on your machine — no inputs are saved or sent anywhere.',
+    category: 'finance',
+    tags: ['tip', 'bill', 'split', 'restaurant', 'gratuity', 'finance'],
+    icon: 'receipt',
+    tier: 'free',
+    requiresBackend: false,
+    component: TipSplitter,
+  },
+  {
+    id: 'loan-emi',
+    name: 'Loan / EMI Calculator',
+    description: 'Calculate monthly payment and amortization for any loan.',
+    longDescription:
+      'Enter principal, annual interest rate, and term in months. Get monthly ' +
+      'payment, total interest, and a full amortization schedule with chart. ' +
+      'Runs entirely on your machine.',
+    category: 'finance',
+    tags: ['loan', 'emi', 'mortgage', 'amortization', 'interest', 'payment', 'monthly'],
+    icon: 'piggy-bank',
+    tier: 'free',
+    requiresBackend: false,
+    component: LoanEmi,
+  },
+  {
+    id: 'compound-interest',
+    name: 'Compound Interest',
+    description: 'Project investment growth with compound interest and contributions.',
+    longDescription:
+      'Enter starting principal, annual return, monthly contribution, and time ' +
+      'horizon. See projected final value, total contributed, and earnings — ' +
+      'with a year-by-year chart. All local.',
+    category: 'finance',
+    tags: ['compound', 'interest', 'investment', 'savings', 'growth', 'returns'],
+    icon: 'trending-up',
+    tier: 'free',
+    requiresBackend: false,
+    component: CompoundInterest,
+  },
+  {
+    id: 'currency-converter',
+    name: 'Currency Converter',
+    description: 'Convert between 25 currencies using bundled rates. All local.',
+    longDescription:
+      'Convert any amount between 25 major currencies using a bundled snapshot of ' +
+      'Federal Reserve H.10 rates. Refresh manually when you need newer numbers — ' +
+      'your data never leaves your machine.',
+    category: 'finance',
+    tags: ['currency', 'convert', 'exchange', 'rate', 'forex', 'usd', 'eur', 'gbp'],
+    icon: 'dollar-sign',
+    tier: 'free',
+    requiresBackend: true,
+    component: CurrencyConverter,
+  },
+  {
+    id: 'expense-splitter',
+    name: 'Expense Splitter',
+    description: 'Split group expenses fairly. Who owes whom, calculated locally.',
+    longDescription:
+      'Add a list of expenses with who paid for what. Get back the minimum settlement ' +
+      'transactions to make everyone even. Trip bills, shared rent, group dinners — all ' +
+      'local, no accounts.',
+    category: 'finance',
+    tags: ['expense', 'split', 'settlement', 'group', 'trip', 'splitwise', 'iou'],
+    icon: 'receipt',
+    tier: 'free',
+    requiresBackend: false,
+    component: ExpenseSplitter,
+  },
+  {
+    id: 'mortgage',
+    name: 'Mortgage Calculator',
+    description: 'Estimate monthly payment with property tax, insurance, and amortization.',
+    longDescription:
+      'Enter loan amount, rate, term, and optional property tax + ' +
+      'homeowner\'s insurance. Get total monthly payment broken down by P&I ' +
+      'and escrow, plus a full amortization schedule.',
+    category: 'finance',
+    tags: [
+      'mortgage',
+      'home',
+      'house',
+      'loan',
+      'amortization',
+      'pmi',
+      'escrow',
+      'property',
+      'tax',
+      'insurance',
+    ],
+    icon: 'piggy-bank',
+    tier: 'pro',
+    requiresBackend: false,
+    component: Mortgage,
+  },
+  {
+    id: 'retirement',
+    name: 'Retirement Calculator',
+    description: 'Project portfolio growth and check the 4% withdrawal rule.',
+    longDescription:
+      'Enter current age, target retirement age, current savings, monthly ' +
+      'contribution, and expected return. Get a deterministic projection ' +
+      'plus a 4% rule check labeled as a heuristic, not a forecast.',
+    category: 'finance',
+    tags: [
+      'retirement',
+      'fire',
+      'portfolio',
+      '401k',
+      'ira',
+      'roth',
+      'pension',
+      'savings',
+      '4% rule',
+      'withdrawal',
+      'compound',
+    ],
+    icon: 'piggy-bank',
+    tier: 'pro',
+    requiresBackend: false,
+    component: Retirement,
+  },
+  {
+    id: 'tax-bracket',
+    name: 'Tax Bracket Estimator',
+    description: 'Estimate US federal income tax for the bundled tax year. Estimate only.',
+    longDescription:
+      'Enter your filing status and gross income. See estimated federal income ' +
+      'tax owed, effective rate, and marginal rate using bundled IRS bracket ' +
+      'data. Estimate only — not tax advice.',
+    category: 'finance',
+    tags: [
+      'tax',
+      'bracket',
+      'income',
+      'irs',
+      'federal',
+      'effective rate',
+      'marginal',
+    ],
+    icon: 'percent',
+    tier: 'pro',
+    requiresBackend: true,
+    component: TaxBracket,
+  },
+  {
+    id: 'paycheck',
+    name: 'Paycheck Calculator',
+    description: 'Estimate take-home pay after federal tax + FICA. Estimate only.',
+    longDescription:
+      'Enter gross pay, period, and filing status. Get estimated net pay after ' +
+      'federal income tax + Social Security + Medicare. Federal only — excludes ' +
+      'state, local, and pre-tax benefits.',
+    category: 'finance',
+    tags: [
+      'paycheck',
+      'salary',
+      'take home',
+      'net pay',
+      'fica',
+      'social security',
+      'medicare',
+      'w-2',
+      'withholding',
+    ],
+    icon: 'wallet',
+    tier: 'pro',
+    requiresBackend: true,
+    component: Paycheck,
+  },
   // === TOOL_REGISTRATIONS_END ===
 ];
 
@@ -992,6 +1177,64 @@ const SYNONYMS: Record<string, string[]> = {
   regex: ['regex-tester'],
   diff: ['text-diff'],
   placeholder: ['placeholder-image', 'lorem-ipsum'],
+  tip: ['tip-splitter'],
+  bill: ['tip-splitter'],
+  split: ['tip-splitter', 'expense-splitter'],
+  expense: ['expense-splitter'],
+  settlement: ['expense-splitter'],
+  group: ['expense-splitter'],
+  trip: ['expense-splitter'],
+  splitwise: ['expense-splitter'],
+  iou: ['expense-splitter'],
+  share: ['expense-splitter'],
+  loan: ['loan-emi', 'mortgage'],
+  emi: ['loan-emi'],
+  mortgage: ['mortgage', 'loan-emi'],
+  amortization: ['loan-emi', 'mortgage'],
+  home: ['mortgage'],
+  house: ['mortgage'],
+  pmi: ['mortgage'],
+  escrow: ['mortgage'],
+  property: ['mortgage'],
+  interest: ['loan-emi', 'compound-interest', 'mortgage'],
+  compound: ['compound-interest', 'retirement'],
+  investment: ['compound-interest', 'retirement'],
+  savings: ['compound-interest', 'retirement'],
+  retirement: ['retirement', 'compound-interest'],
+  fire: ['retirement'],
+  '401k': ['retirement'],
+  ira: ['retirement'],
+  roth: ['retirement'],
+  pension: ['retirement'],
+  withdrawal: ['retirement'],
+  portfolio: ['retirement'],
+  '4%': ['retirement'],
+  currency: ['currency-converter'],
+  exchange: ['currency-converter'],
+  rate: ['currency-converter'],
+  forex: ['currency-converter'],
+  fx: ['currency-converter'],
+  usd: ['currency-converter'],
+  eur: ['currency-converter'],
+  gbp: ['currency-converter'],
+  jpy: ['currency-converter'],
+  inr: ['currency-converter'],
+  tax: ['tax-bracket', 'paycheck'],
+  irs: ['tax-bracket', 'paycheck'],
+  federal: ['tax-bracket', 'paycheck'],
+  bracket: ['tax-bracket'],
+  'effective rate': ['tax-bracket'],
+  marginal: ['tax-bracket'],
+  'income tax': ['tax-bracket', 'paycheck'],
+  paycheck: ['paycheck'],
+  salary: ['paycheck'],
+  'take home': ['paycheck'],
+  'net pay': ['paycheck'],
+  fica: ['paycheck'],
+  'social security': ['paycheck'],
+  medicare: ['paycheck'],
+  'w-2': ['paycheck'],
+  withholding: ['paycheck'],
 };
 
 /**

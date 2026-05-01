@@ -6,7 +6,7 @@
 
 ## What Is ToolBox
 
-A **local-first desktop utility app** (macOS + Windows + Linux) that bundles **59 tools** into a single, fast, native application. Built with Tauri 2 (Rust backend) + React 19 (TypeScript frontend).
+A **local-first desktop utility app** (macOS + Windows + Linux) that bundles **68 tools** into a single, fast, native application. Built with Tauri 2 (Rust backend) + React 19 (TypeScript frontend).
 
 **The pitch**: People paste sensitive data — tax returns, contracts, personal photos, API keys — into random websites to merge PDFs, resize images, or decode tokens. ToolBox does it all locally. Nothing leaves the machine. Ever.
 
@@ -19,8 +19,8 @@ A **local-first desktop utility app** (macOS + Windows + Linux) that bundles **5
 **Pricing**: $3.99/month OR $29.99 one-time lifetime purchase (user's choice).
 
 **Tier structure**:
-- **Free tier** (33 tools): All consumer essentials — PDF Merge, Image Resize/Compress/Convert/Crop/Rotate, QR Code, Barcode, ZIP, Color Palette, Favicon Generator, Password Checker, JSON Formatter, Base64, UUID, Hash, Timestamp, URL Encoder, JWT Decoder, Color Converter, Text Case, Lorem Ipsum, Word Counter, Text Cleanup, Unit Converter, Date Calculator, Aspect Ratio, Placeholder Image, Screen Ruler, Checksum Verifier, Social Media Resizer, and more.
-- **Pro tier** ($3.99/mo or $29.99 lifetime): All 59 tools — adds PDF Split/Compress/Pages/Watermark/ToImage, Image Watermark/Batch, EXIF Strip, Regex Tester, Text Diff, SQL Formatter, YAML/JSON, XML Formatter, HTML Encoder/Preview, Number Base, Password Generator, GZip, Markdown Preview/PDF, CSV Viewer/JSON, JSON-to-TypeScript, JSONPath, Epoch Batch, Cron Parser, Backslash Escape.
+- **Free tier** (38 tools): All consumer essentials — PDF Merge, Image Resize/Compress/Convert/Crop/Rotate, QR Code, Barcode, ZIP, Color Palette, Favicon Generator, Password Checker, JSON Formatter, Base64, UUID, Hash, Timestamp, URL Encoder, JWT Decoder, Color Converter, Text Case, Lorem Ipsum, Word Counter, Text Cleanup, Unit Converter, Date Calculator, Aspect Ratio, Placeholder Image, Screen Ruler, Checksum Verifier, Social Media Resizer, and more.
+- **Pro tier** ($3.99/mo or $29.99 lifetime): All 68 tools — adds PDF Split/Compress/Pages/Watermark/ToImage, Image Watermark/Batch, EXIF Strip, Regex Tester, Text Diff, SQL Formatter, YAML/JSON, XML Formatter, HTML Encoder/Preview, Number Base, Password Generator, GZip, Markdown Preview/PDF, CSV Viewer/JSON, JSON-to-TypeScript, JSONPath, Epoch Batch, Cron Parser, Backslash Escape, Mortgage Calculator, Retirement Calculator, Tax Bracket Estimator, Paycheck Calculator.
 
 **UX implications of the business model**:
 - The free-to-paid upgrade must be **smooth and non-annoying**. No pop-ups. No nagging. Pro tools show a subtle lock icon; clicking opens a clean upgrade prompt.
@@ -116,7 +116,7 @@ src/                            # React frontend
 │   ├── tool/                   # ToolPage wrapper, InputOutputLayout, error boundary
 │   └── settings/               # ApiKeyInput (masked, reveal-with-timeout)
 ├── tools/                      # === EACH TOOL IS A SELF-CONTAINED FOLDER ===
-│   ├── registry.ts             # All 59 tools registered with lazy() imports + synonym search
+│   ├── registry.ts             # All 68 tools registered with lazy() imports + synonym search
 │   ├── types.ts                # ToolDefinition, ToolMeta, ToolCategory
 │   └── <tool-id>/              # meta.ts + Component.tsx (+ optional helpers)
 ├── pages/                      # Home, AllTools, Settings, NotFound, ToolRoute
@@ -135,6 +135,9 @@ src/                            # React frontend
 ```bash
 # Frontend: TypeScript strict + Vite production build
 npm run build
+
+# Frontend: Vitest unit tests (validators, format, finance-math, redactedError)
+npm run test
 
 # Rust: compilation check
 cd src-tauri && cargo check
@@ -309,7 +312,7 @@ Before any PR is merged or code is considered done, verify:
 
 ## Current State (v0.2.0)
 
-- **59 tools** shipped (33 free, 26 pro) across 12 categories
+- **68 tools** shipped (38 free, 30 pro) across 13 categories — Phase 2 of the Finance Calculator Pack is now complete. The full 9-tool finance pack ships: Tip Splitter (Phase 0), Currency Converter (Phase 1 Lane A, IPC-loaded FX snapshot), Expense Splitter (Phase 1 Lane B, pair-payoff settlement), Loan/EMI + Compound Interest (Phase 1 Lane C), Mortgage Calculator (Phase 2 Lane D, P&I + optional escrow), Retirement Calculator (Phase 2 Lane E, deterministic compound + 4% rule heuristic), Tax Bracket Estimator and Paycheck Calculator (Phase 2 Lane F, IPC-loaded `tax-fed` snapshot, persistent compliance disclaimers). All four "estimate-only" finance tools (Mortgage, Retirement, Tax Bracket, Paycheck) render their disclaimer banner in every state — loading, error, empty, and result.
 - **71 Playwright E2E tests** across 24 spec files, **14 Rust unit tests**
 - **Consumer-friendly home screen** with category cards, synonym search, popular tools grid, and privacy badge
 - **Clipboard auto-detect** with file path + text pattern matching, sensitive content filter, poll-on-focus
@@ -339,7 +342,8 @@ Before any PR is merged or code is considered done, verify:
 | `DEPENDENCIES.md` | Tool-to-dependency mapping, CVE history, update procedure |
 | `README.md` | Public-facing project description |
 | `src/tools/types.ts` | `ToolDefinition`, `ToolMeta`, `ToolCategory` type contracts |
-| `src/tools/registry.ts` | All 59 tools registered with lazy imports + synonym search |
+| `src/tools/registry.ts` | All 68 tools registered with lazy imports + synonym search |
+| `src/tools/finance/_lib/Chart.tsx` | Shared uPlot-backed chart wrapper used by finance tools (theme-aware, sr-only table fallback) |
 | `src/lib/accents.ts` | 8 accent color presets + runtime CSS variable application |
 | `src/lib/tauri.ts` | Type-safe IPC wrappers for every Rust command |
 | `src/lib/icons.ts` | Curated Lucide icon registry (~60 icons) |

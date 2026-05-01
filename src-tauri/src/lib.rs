@@ -13,6 +13,9 @@ pub mod storage;
 use commands::{
     crypto::{hash_file, hash_text},
     file_ops::{read_text_file, stat_file, write_text_file},
+    finance::{
+        get_finance_dataset, import_fx_snapshot, import_tax_snapshot, reset_finance_overlay,
+    },
     image_ops::{convert_image, get_image_info, read_exif, resize_image, strip_exif},
     keychain::{delete_api_key, get_api_key, get_api_key_summary, store_api_key},
     preferences::{check_preferences_recovery, dismiss_preferences_recovery, get_preferences, set_preferences},
@@ -112,6 +115,11 @@ pub fn run() {
             check_preferences_recovery,
             dismiss_preferences_recovery,
             set_preferences,
+            // finance
+            get_finance_dataset,
+            import_fx_snapshot,
+            import_tax_snapshot,
+            reset_finance_overlay,
         ])
         .setup(|app| {
             // ── Tray icon (created purely via TrayIconBuilder) ───────────

@@ -21,6 +21,7 @@ Tool-to-dependency mapping for ToolBox. Updated when tools or dependencies chang
 | Barcode Generator | `jsbarcode` | 3.11.6 | `JsBarcode(svgElement, value, { format })` | Code128, UPC-A, EAN-13, EAN-8, Code39, ITF-14. |
 | JSONPath Evaluator | `jsonpath-plus` | 10.3.0 | `JSONPath({ path, json })` | Full JSONPath spec with filters, wildcards, recursive descent. |
 | Cron Parser | `cronstrue` | 2.52.0 | `cronstrue.toString(expression)` | Cron expression → human-readable description. |
+| Loan/EMI, Compound Interest (and future Mortgage, Retirement) | `uplot` | 1.6.32 | `new uPlot(opts, data, container)` via shared `_lib/Chart.tsx` wrapper | MIT license. Lightweight charting (~40 KB gz), zero D3 dependency, used by Grafana. Chosen over Recharts/Chart.js for bundle size and canvas performance. Theme-aware via CSS variable reads + `MutationObserver` on `data-theme`. |
 
 ### Framework and infrastructure
 

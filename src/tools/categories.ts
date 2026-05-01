@@ -34,6 +34,12 @@ export const TOOL_CATEGORIES: ToolCategoryMeta[] = [
     icon: 'folder',
   },
   {
+    id: 'finance',
+    label: 'Finance',
+    description: 'Tip, loan, currency, tax — money math, all local.',
+    icon: 'wallet',
+  },
+  {
     id: 'calculators',
     label: 'Calculators',
     description: 'Units, dates, and everyday number crunching.',

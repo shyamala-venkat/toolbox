@@ -146,3 +146,46 @@ export const stripExif = (
 
 export const readExif = (path: string): Promise<[string, string][]> =>
   invoke<[string, string][]>('read_exif', { path });
+
+// ─── finance datasets ───────────────────────────────────────────────────────
+
+export type FinanceDatasetName = 'fx-usd' | 'tax-fed';
+
+/**
+ * Result of `get_finance_dataset`. `data` is whatever JSON the dataset
+ * carries; the consumer is expected to validate its shape before use.
+ *
+ * `source: 'overlay'` means the user has imported a snapshot which is now
+ * shadowing the bundled file. `'bundled'` means we're serving the version
+ * shipped with the app.
+ */
+export interface FinanceDatasetResponse {
+  kind: string;
+  data: unknown;
+  source: 'overlay' | 'bundled';
+  asOf: string;
+}
+
+export interface FxImportResult {
+  asOf: string;
+  currencies: string[];
+}
+
+export interface TaxImportResult {
+  taxYear: number;
+}
+
+export const getFinanceDataset = (
+  name: FinanceDatasetName,
+): Promise<FinanceDatasetResponse> =>
+  invoke<FinanceDatasetResponse>('get_finance_dataset', { name });
+
+export const importFxSnapshot = (json: string): Promise<FxImportResult> =>
+  invoke<FxImportResult>('import_fx_snapshot', { json });
+
+export const importTaxSnapshot = (json: string): Promise<TaxImportResult> =>
+  invoke<TaxImportResult>('import_tax_snapshot', { json });
+
+export const resetFinanceOverlay = (
+  name: FinanceDatasetName,
+): Promise<void> => invoke<void>('reset_finance_overlay', { name });

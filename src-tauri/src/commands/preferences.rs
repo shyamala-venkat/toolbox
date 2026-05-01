@@ -152,6 +152,7 @@ mod tests {
             compact_mode: false,
             minimize_to_tray: true,
             monospace_font_size: 14,
+            accent_color: "teal".to_string(),
             tool_defaults: serde_json::Value::Object(serde_json::Map::new()),
         }
     }
