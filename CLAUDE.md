@@ -91,7 +91,7 @@ This is non-negotiable because:
 | Backend | Rust (stable), Tauri 2.1, Tokio, serde, keyring |
 | Icons | Lucide React (curated subset in `src/lib/icons.ts`) |
 | Tool libs | `sql-formatter`, `js-yaml` (with `JSON_SCHEMA`), `qrcode`, `diff@8`, `pdf-lib`, `pdfjs-dist`, `fflate`, `marked`, `dompurify`, `papaparse`, `jsbarcode`, `jsonpath-plus`, `cronstrue` |
-| Testing | Cargo test (14 Rust tests), Playwright E2E (71 tests), `npm run build` as type-check gate |
+| Testing | Cargo test (115 Rust unit + 2 integration tests), Vitest (175 tests), Playwright E2E (116 tests), `npm run build` as type-check gate |
 
 **What NOT to use**: No Electron. No Redux/MobX. No CSS-in-JS. No SSR. No external APIs from core tools. No ORM. No new dependencies without clear justification — every dep is an attack surface.
 
@@ -149,7 +149,7 @@ cd src-tauri && cargo clippy --all-targets -- -D warnings
 # Rust: tests (113 tests covering path validators, preferences, history storage + encryption + recovery, secret-pattern redaction)
 cd src-tauri && cargo test
 
-# E2E tests (96 Playwright tests against the Vite dev server)
+# E2E tests (116 Playwright tests against the Vite dev server)
 npm run test:e2e
 
 # Production build (creates .dmg / .msi / .deb)
@@ -237,6 +237,10 @@ These rules apply to EVERY file, EVERY commit, EVERY tool. No exceptions.
 3. **Register** in `src/tools/registry.ts` — add a `lazy()` import between the `TOOL_IMPORTS` markers and a `ToolDefinition` entry between the `TOOL_REGISTRATIONS` markers.
 4. **Icons** — check `src/lib/icons.ts` first. Add a new Lucide icon to the registry if needed.
 5. **Tier** — set `tier: 'free'` or `tier: 'pro'` in meta.ts. Free tools are permanently free. Pro tools require a subscription/lifetime purchase.
+6. **History eligibility (PR-B)** — pick exactly one path in `meta.ts`:
+   - **Text-in/text-out tool:** set `historyKind` to one of `'text' | 'json' | 'sql' | 'yaml' | 'xml' | 'html' | 'markdown' | 'regex' | 'csv' | 'diff'`. The drawer mounts automatically. Inside the tool, call `useHistoryCapture({ toolId, input, output, params, enabled, error })` from `@/hooks/useHistoryCapture`, and read restored state via `useHistoryRestore()` from `@/contexts/HistoryRestoreContext`.
+   - **File-input, form, or visual tool that doesn't fit text-in/text-out:** set `historyEligible: false`. The drawer is suppressed.
+   - **Tool that processes secrets (passwords, hashes, decoded JWTs, etc.):** set `sensitiveContent: true` AND add the tool id to `SENSITIVE_TOOLS` in `src-tauri/src/security/redaction.rs`. The integration test `src-tauri/tests/blocklist_parity.rs` enforces parity between the two lists; the build fails on drift.
 
 ### Patterns every tool MUST follow
 
@@ -246,6 +250,7 @@ These rules apply to EVERY file, EVERY commit, EVERY tool. No exceptions.
 - **`didMount` flag.** Every persist effect must skip the initial render to avoid clobbering other tools' defaults during hydration.
 - **Debounce input processing.** Use `useDebounce(value, 150)` (or 200ms for expensive operations). Never process on every keystroke.
 - **Graceful error handling.** Catch all errors from parsing/processing. Show friendly inline messages via the tool's own error state or `useAppStore.getState().showToast(message, 'error')`. Never let an unhandled exception crash the tool — the `ToolPage` error boundary is a last resort, not a primary error handling strategy.
+- **History capture (PR-B).** Text-in/text-out tools call `useHistoryCapture({ toolId, input, output, params, enabled, error })` exactly once near the top of the component, AFTER the parsed result is available. Pass `enabled: error == null` so failed parses never persist. The hook owns its own debounce — do not pre-debounce input on its behalf. Restore is consumed via `useHistoryRestore()` from `@/contexts/HistoryRestoreContext`; the context is always present (no-op for ineligible tools), so the hook can be called unconditionally.
 - **Both light and dark mode.** Use CSS variables from `themes.css` only. Test in both themes.
 - **No new dependencies** without explicit justification. Most tools use zero third-party libraries (Canvas API, Web Workers, browser-native APIs preferred). See `DEPENDENCIES.md` for the full mapping.
 
@@ -317,8 +322,9 @@ Before any PR is merged or code is considered done, verify:
 ## Current State (v0.2.0)
 
 - **68 tools** shipped (38 free, 30 pro) across 13 categories — Phase 2 of the Finance Calculator Pack is now complete. The full 9-tool finance pack ships: Tip Splitter (Phase 0), Currency Converter (Phase 1 Lane A, IPC-loaded FX snapshot), Expense Splitter (Phase 1 Lane B, pair-payoff settlement), Loan/EMI + Compound Interest (Phase 1 Lane C), Mortgage Calculator (Phase 2 Lane D, P&I + optional escrow), Retirement Calculator (Phase 2 Lane E, deterministic compound + 4% rule heuristic), Tax Bracket Estimator and Paycheck Calculator (Phase 2 Lane F, IPC-loaded `tax-fed` snapshot, persistent compliance disclaimers). All four "estimate-only" finance tools (Mortgage, Retirement, Tax Bracket, Paycheck) render their disclaimer banner in every state — loading, error, empty, and result.
-- **Tool History — PR-A scaffolding (storage + IPC + Settings)** — local-first per-tool history backed by SQLCipher-encrypted SQLite at `app_data_dir/history.db`. 32-byte key generated via `getrandom` on first launch and stored in OS keychain (service `toolbox-history`). 9 IPC commands (`add_history_entry`, `list_history`, `get_history_entry`, `delete_history_entry`, `clear_history`, `pin_history_entry`, `set_history_paused`, `set_history_retention`, `history_storage_stats`). Defense-in-depth blocklist: `meta.ts` `sensitiveContent: true` flag + Rust `SENSITIVE_TOOLS` const. Secret-pattern detection on input + output + params via lazy `RegexSet` from a curated `gitleaks` snapshot. Tombstone rows (metadata only, 0 bytes) preserve the trust signal across restarts without storing the secret. Caps: 256 KB input, 1 MB output, 50 MB total (pins count toward total cap), 200 entries/tool, 20 pins/tool. 7-day default TTL (configurable: 1d/7d/30d/forever; sweep runs at startup AND on retention change). Failure modes: keychain unavailability ≠ DB corruption (only post-key-rejection triggers `.bad` rename + fresh start). Settings → History panel (retention radio, pause toggle, storage indicator, clear-all w/ two-step confirm, privacy explainer). **Drawer + per-tool integration land in PR-B.**
-- **108 Playwright E2E tests** across 24 spec files, **113 Rust unit tests**, **132 Vitest tests**
+- **Tool History — PR-A scaffolding (storage + IPC + Settings)** — local-first per-tool history backed by SQLCipher-encrypted SQLite at `app_data_dir/history.db`. 32-byte key generated via `getrandom` on first launch and stored in OS keychain (service `toolbox-history`). 9 IPC commands (`add_history_entry`, `list_history`, `get_history_entry`, `delete_history_entry`, `clear_history`, `pin_history_entry`, `set_history_paused`, `set_history_retention`, `history_storage_stats`). Defense-in-depth blocklist: `meta.ts` `sensitiveContent: true` flag + Rust `SENSITIVE_TOOLS` const. Secret-pattern detection on input + output + params via lazy `RegexSet` from a curated `gitleaks` snapshot. Tombstone rows (metadata only, 0 bytes) preserve the trust signal across restarts without storing the secret. Caps: 256 KB input, 1 MB output, 50 MB total (pins count toward total cap), 200 entries/tool, 20 pins/tool. 7-day default TTL (configurable: 1d/7d/30d/forever; sweep runs at startup AND on retention change). Failure modes: keychain unavailability ≠ DB corruption (only post-key-rejection triggers `.bad` rename + fresh start). Settings → History panel (retention radio, pause toggle, storage indicator, clear-all w/ two-step confirm, privacy explainer).
+- **Tool History — PR-B drawer + per-tool wiring** — every text-eligible tool (~22 in v1) now renders a right-side "Recent runs" drawer, mounted by `ToolPage` and absent from sensitive tools (`sensitiveContent: true`) and file-input tools (`historyEligible: false`). Default state is collapsed-to-rail (32 px) with a `Cmd/Ctrl+Shift+H` toggle and Esc to collapse. Detail panel slides in at 640 px; renders Input/Output via the generic `<HistoryViewer kind>` so the tool's own bundle is never lazy-loaded just to display history. Capture path: shared `useHistoryCapture()` hook debounces 1.5s on stable input + non-empty output + no error, then fires `add_history_entry` IPC. Restore is delivered through `HistoryRestoreContext` so each tool consumes the restored input via a single `useHistoryRestore()` call. Defense-in-depth blocklist parity is enforced by a Rust integration test (`src-tauri/tests/blocklist_parity.rs`) that scans every `meta.ts` and asserts the `sensitiveContent: true` set equals `SENSITIVE_TOOLS`.
+- **116 Playwright E2E tests** across 27 spec files, **115 Rust unit tests + 2 integration tests**, **175 Vitest tests**
 - **Consumer-friendly home screen** with category cards, synonym search, popular tools grid, and privacy badge
 - **Clipboard auto-detect** with file path + text pattern matching, sensitive content filter, poll-on-focus
 - **8 accent color presets** (default: teal) — user-selectable in Settings

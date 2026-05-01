@@ -13,6 +13,8 @@ export const meta: ToolMeta = {
   icon: 'images',
   tier: 'pro',
   requiresBackend: true,
+  // File-input/image tool: no v1 history drawer.
+  historyEligible: false,
 };
 
 export type BatchOperation = 'resize' | 'compress' | 'convert' | 'strip-exif';

@@ -12,4 +12,5 @@ export const meta: ToolMeta = {
   icon: 'align-left',
   tier: 'free',
   requiresBackend: false,
+  historyKind: 'text',
 };

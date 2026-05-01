@@ -13,6 +13,8 @@ export const meta: ToolMeta = {
   icon: 'shield-check',
   tier: 'free',
   requiresBackend: true,
+  // File-input tool: no v1 history drawer.
+  historyEligible: false,
 };
 
 export type VerifyAlgorithm = 'md5' | 'sha1' | 'sha256' | 'sha512';

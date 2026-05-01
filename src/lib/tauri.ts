@@ -234,13 +234,21 @@ export interface HistoryEntry {
 }
 
 /**
- * Result of `addHistoryEntry`. `stored: false` means the row was rejected
- * outright (paused, unknown tool, oversize). `stored: true` with a non-null
- * `reason` means a tombstone row was inserted (sensitive pattern hit).
+ * Result of `addHistoryEntry`.
+ * - `stored: false` → the row was rejected outright (paused, unknown tool,
+ *   oversize). `entry` is omitted; `reason` carries the rejection code.
+ * - `stored: true` with `reason: null` → a full row was inserted; `entry`
+ *   carries the canonical inserted row including its database id.
+ * - `stored: true` with a non-null `reason` (e.g. `"blocklisted"` or
+ *   `"sensitive_pattern:<id>"`) → a tombstone row was inserted; `entry`
+ *   carries the tombstone row (redacted=true, NULL content, real id) so the
+ *   UI can render the lock-badge entry immediately.
  */
 export interface AddEntryResult {
   stored: boolean;
   reason: string | null;
+  /** Canonical inserted row when `stored=true`. Absent on rejection. */
+  entry?: HistoryEntry;
 }
 
 export interface StorageStats {

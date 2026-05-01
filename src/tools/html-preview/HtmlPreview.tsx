@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DOMPurify from 'dompurify';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { Textarea } from '@/components/ui/Textarea';
 import { Toggle } from '@/components/ui/Toggle';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { meta } from './meta';
 
 const PLACEHOLDER = `<h1>Hello, HTML!</h1>
@@ -72,6 +74,28 @@ function HtmlPreview() {
   }, [showSource, debouncedInput]);
 
   const isEmpty = input.trim().length === 0;
+
+  // History capture: input is the raw HTML; output is the sanitized HTML
+  // (the actual thing the preview renders). Restore reapplies just the input.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: sanitizedHtml,
+    params: { showSource },
+    enabled: !isEmpty,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (typeof obj.showSource === 'boolean') setShowSource(obj.showSource);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   return (
     <ToolPage tool={meta} fullWidth>

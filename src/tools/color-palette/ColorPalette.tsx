@@ -4,6 +4,8 @@ import { ToolPage } from '@/components/tool/ToolPage';
 import { Input } from '@/components/ui/Input';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useClipboard } from '@/hooks/useClipboard';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useAppStore } from '@/stores/appStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
@@ -309,6 +311,26 @@ function ColorPalette() {
   }, []);
 
   const isInvalid = hexInput.length > 0 && !parseHex(hexInput);
+
+  // History capture: input is the seed hex; output is the labelled palettes.
+  const captureOutput = useMemo(() => {
+    if (!palettes) return '';
+    return palettes.map((p) => `${p.name}:\n${p.colors.join(', ')}`).join('\n\n');
+  }, [palettes]);
+  useHistoryCapture({
+    toolId: meta.id,
+    input: hexInput,
+    output: captureOutput,
+    params: {},
+    enabled: !isInvalid && parsedColor !== null && hexInput.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setHexInput(pendingRestore.input);
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   return (
     <ToolPage tool={meta}>

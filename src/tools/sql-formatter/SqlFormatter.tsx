@@ -8,6 +8,8 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta, SQL_DIALECTS, SQL_DIALECT_IDS, type SqlDialect } from './meta';
 
@@ -133,6 +135,29 @@ function SqlFormatter() {
   }, [dialect, tabWidth, keywordCase]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: only successful formats are eligible.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { dialect, tabWidth, keywordCase },
+    enabled: result.error === null && input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isDialect(obj.dialect)) setDialect(obj.dialect);
+      if (isTabWidth(obj.tabWidth)) setTabWidth(obj.tabWidth);
+      if (isKeywordCase(obj.keywordCase)) setKeywordCase(obj.keywordCase);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const isEmpty = input.trim().length === 0;
   const hasError = !isEmpty && result.error !== null;

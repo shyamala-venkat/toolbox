@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { meta } from './meta';
 import {
   tokenize,
@@ -73,6 +75,28 @@ function TextCase() {
   }, [debouncedInput]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: text-case has 13 simultaneous outputs. Synthesize a
+  // single labelled block as the captured output so the history viewer can
+  // render something meaningful; restore re-applies just the input.
+  const synthesizedOutput = useMemo(() => {
+    if (input.trim().length === 0) return '';
+    return rows.map((r) => `${r.label}: ${r.value}`).join('\n');
+  }, [rows, input]);
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: synthesizedOutput,
+    params: {},
+    enabled: input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const inputPanel = (
     <div className="flex flex-col gap-2">

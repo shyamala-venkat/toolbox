@@ -12,4 +12,6 @@ export const meta: ToolMeta = {
   icon: 'scissors',
   tier: 'pro',
   requiresBackend: false,
+  // File-input tool: no v1 history drawer.
+  historyEligible: false,
 };

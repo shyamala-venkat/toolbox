@@ -21,4 +21,6 @@ export const meta: ToolMeta = {
   icon: 'trending-up',
   tier: 'free',
   requiresBackend: false,
+  // Form-input finance calculator: no v1 history drawer.
+  historyEligible: false,
 };

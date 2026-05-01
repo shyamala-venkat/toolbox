@@ -18,4 +18,6 @@ export const meta: ToolMeta = {
     patterns: [/^eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*$/],
     priority: 9,
   },
+  // Sensitive: JWTs carry auth context. Never persist them.
+  sensitiveContent: true,
 };

@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'case-sensitive',
   tier: 'free',
   requiresBackend: false,
+  historyKind: 'text',
 };

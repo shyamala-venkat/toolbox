@@ -13,4 +13,6 @@ export const meta: ToolMeta = {
   icon: 'scan',
   tier: 'free',
   requiresBackend: false,
+  // Visual/image output: no v1 history drawer.
+  historyEligible: false,
 };

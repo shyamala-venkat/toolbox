@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'file-text',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'markdown',
 };

@@ -13,4 +13,6 @@ export const meta: ToolMeta = {
   icon: 'shield-check',
   tier: 'free',
   requiresBackend: false,
+  // Sensitive: the user is literally typing in their password to test it.
+  sensitiveContent: true,
 };

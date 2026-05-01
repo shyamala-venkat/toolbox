@@ -13,4 +13,6 @@ export const meta: ToolMeta = {
   icon: 'receipt',
   tier: 'free',
   requiresBackend: false,
+  // Multi-row form input: no v1 history drawer.
+  historyEligible: false,
 };

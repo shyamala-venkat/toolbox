@@ -16,4 +16,7 @@ export const meta: ToolMeta = {
     patterns: [/^\s*[[{]/],
     priority: 10,
   },
+  // Eligible for the per-tool history drawer. Pretty-printed JSON gets the
+  // generic JSON viewer treatment in the detail panel.
+  historyKind: 'json',
 };

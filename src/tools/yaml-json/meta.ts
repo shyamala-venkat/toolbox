@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'file-cog',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'yaml',
 };

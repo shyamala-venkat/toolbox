@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'search',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'json',
 };

@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 
@@ -128,6 +130,28 @@ function UrlEncoder() {
   }, [result]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: only successful round-trips are eligible.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { direction, scope },
+    enabled: result.error === null && input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isDirection(obj.direction)) setDirection(obj.direction);
+      if (isScope(obj.scope)) setScope(obj.scope);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   // ─── Options bar ──────────────────────────────────────────────────────────
 

@@ -13,4 +13,7 @@ export const meta: ToolMeta = {
   icon: 'lock',
   tier: 'free',
   requiresBackend: false,
+  // Calculator with multi-control state (octal/symbolic/checkboxes); doesn't
+  // fit text-in/text-out v1. No v1 history drawer.
+  historyEligible: false,
 };

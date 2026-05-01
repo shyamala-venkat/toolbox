@@ -13,4 +13,7 @@ export const meta: ToolMeta = {
   icon: 'key',
   tier: 'pro',
   requiresBackend: false,
+  // Sensitive: generated passwords must never be persisted. Defense-in-depth
+  // — Rust SENSITIVE_TOOLS list also rejects writes for this id.
+  sensitiveContent: true,
 };

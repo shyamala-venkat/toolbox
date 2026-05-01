@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { FileDropZone } from '@/components/ui/FileDropZone';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useAppStore } from '@/stores/appStore';
 import { formatBytes } from '@/lib/utils';
 import { meta } from './meta';
@@ -149,6 +151,32 @@ function Base64Tool() {
   }, [mode, textResult]);
 
   const handleClearText = useCallback(() => setTextInput(''), []);
+
+  // History capture: only text mode is eligible (file mode operates on raw
+  // bytes and the output can be megabytes — out of scope for v1 history).
+  useHistoryCapture({
+    toolId: meta.id,
+    input: textInput,
+    output: textResult.output,
+    params: { direction, urlSafe },
+    enabled: mode === 'text' && textResult.error === null && textInput.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setMode('text');
+    setTextInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (obj.direction === 'encode' || obj.direction === 'decode') {
+        setDirection(obj.direction);
+      }
+      if (typeof obj.urlSafe === 'boolean') setUrlSafe(obj.urlSafe);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const handleClearFile = useCallback(() => {
     setFileInfo(null);

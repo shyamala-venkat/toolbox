@@ -13,6 +13,8 @@ export const meta: ToolMeta = {
   icon: 'smartphone',
   tier: 'free',
   requiresBackend: true,
+  // File-input/image tool: no v1 history drawer.
+  historyEligible: false,
 };
 
 export interface SocialPreset {

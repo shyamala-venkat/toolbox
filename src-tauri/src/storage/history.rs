@@ -233,26 +233,48 @@ pub struct HistoryEntry {
     pub bytes: i64,
 }
 
+/// Outcome of `HistoryStore::add_entry`. `stored: true` is accompanied by the
+/// canonical inserted row (`entry`) so the frontend's optimistic insert can use
+/// the real database id instead of synthesizing one. Tombstones are also
+/// "stored" — the row carries `redacted=true` and NULL content but a real id.
+///
+/// `stored: false` means the row was rejected outright (paused, unknown tool,
+/// oversize). In that case `entry` is `None` and `reason` carries one of:
+/// `"paused" | "unknown_tool" | "size_cap"`.
+///
+/// On `stored: true`, `reason` is `None` for full rows and one of
+/// `"blocklisted" | "sensitive_pattern:<id>" | "output_pattern:<id>"` for
+/// tombstone rows.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AddEntryResult {
     pub stored: bool,
-    /// `None` on success, otherwise one of:
-    /// `"paused" | "unknown_tool" | "size_cap" | "blocklisted" |
-    /// "sensitive_pattern:<id>" | "output_pattern:<id>"`.
     pub reason: Option<String>,
+    /// Canonical inserted row when `stored=true`; `None` when rejected.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub entry: Option<HistoryEntry>,
 }
 
 impl AddEntryResult {
-    fn stored() -> Self {
-        Self { stored: true, reason: None }
+    fn stored_with(entry: HistoryEntry) -> Self {
+        Self { stored: true, reason: None, entry: Some(entry) }
     }
     fn not_stored(reason: impl Into<String>) -> Self {
-        Self { stored: false, reason: Some(reason.into()) }
+        Self {
+            stored: false,
+            reason: Some(reason.into()),
+            entry: None,
+        }
     }
-    fn tombstone(reason: impl Into<String>) -> Self {
+    fn tombstone_with(reason: impl Into<String>, entry: HistoryEntry) -> Self {
         // Tombstones ARE stored (as tombstone rows). We still report the
-        // reason so the frontend can show the first-block toast.
-        Self { stored: true, reason: Some(reason.into()) }
+        // reason so the frontend can show the first-block toast, and we
+        // include the inserted row so the UI can render the lock-badge entry
+        // immediately without a follow-up fetch.
+        Self {
+            stored: true,
+            reason: Some(reason.into()),
+            entry: Some(entry),
+        }
     }
 }
 
@@ -428,28 +450,28 @@ impl HistoryStore {
         // 4. blocklisted tool → tombstone.
         if crate::security::redaction::is_blocklisted_tool(&input.tool_id) {
             self.evict_for_tool_if_full(&input.tool_id)?;
-            self.insert_tombstone(&input.tool_id, &now_iso, "blocklisted")?;
-            return Ok(AddEntryResult::tombstone("blocklisted"));
+            let entry = self.insert_tombstone(&input.tool_id, &now_iso, "blocklisted")?;
+            return Ok(AddEntryResult::tombstone_with("blocklisted", entry));
         }
 
         // 5. pattern scan: input first, output second, then params values.
         if let Some(pid) = crate::security::redaction::contains_secret(&input.input) {
             self.evict_for_tool_if_full(&input.tool_id)?;
             let reason = format!("sensitive_pattern:{pid}");
-            self.insert_tombstone(&input.tool_id, &now_iso, &reason)?;
-            return Ok(AddEntryResult::tombstone(reason));
+            let entry = self.insert_tombstone(&input.tool_id, &now_iso, &reason)?;
+            return Ok(AddEntryResult::tombstone_with(reason, entry));
         }
         if let Some(pid) = crate::security::redaction::contains_secret(&input.output) {
             self.evict_for_tool_if_full(&input.tool_id)?;
             let reason = format!("output_pattern:{pid}");
-            self.insert_tombstone(&input.tool_id, &now_iso, &reason)?;
-            return Ok(AddEntryResult::tombstone(reason));
+            let entry = self.insert_tombstone(&input.tool_id, &now_iso, &reason)?;
+            return Ok(AddEntryResult::tombstone_with(reason, entry));
         }
         if let Some(pid) = scan_params_for_secret(&input.params) {
             self.evict_for_tool_if_full(&input.tool_id)?;
             let reason = format!("sensitive_pattern:{pid}");
-            self.insert_tombstone(&input.tool_id, &now_iso, &reason)?;
-            return Ok(AddEntryResult::tombstone(reason));
+            let entry = self.insert_tombstone(&input.tool_id, &now_iso, &reason)?;
+            return Ok(AddEntryResult::tombstone_with(reason, entry));
         }
 
         // 6. caps + insert full row.
@@ -460,30 +482,66 @@ impl HistoryStore {
         let params_json = serde_json::to_string(&input.params)
             .map_err(|e| HistoryError::InvalidArgument(format!("params not serializable: {e}")))?;
 
-        let conn = self.lock_conn()?;
-        conn.execute(
-            "INSERT INTO entries (tool_id, timestamp, input, output, params, bytes, redacted, reason, pinned)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, NULL, 0)",
-            params![
-                input.tool_id,
-                now_iso,
-                input.input,
-                input.output,
-                params_json,
-                bytes,
-            ],
-        )?;
-        Ok(AddEntryResult::stored())
+        let inserted_id = {
+            let conn = self.lock_conn()?;
+            conn.execute(
+                "INSERT INTO entries (tool_id, timestamp, input, output, params, bytes, redacted, reason, pinned)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, NULL, 0)",
+                params![
+                    input.tool_id,
+                    now_iso,
+                    input.input,
+                    input.output,
+                    params_json,
+                    bytes,
+                ],
+            )?;
+            conn.last_insert_rowid()
+        };
+
+        // Build the canonical entry from the inputs we know plus the assigned
+        // id. We don't re-read from the DB: the values we just inserted are
+        // authoritative, and skipping the SELECT keeps the write path cheap.
+        let entry = HistoryEntry {
+            id: inserted_id,
+            tool_id: input.tool_id,
+            timestamp: now_iso,
+            input: Some(input.input),
+            output: Some(input.output),
+            params: Some(input.params),
+            redacted: false,
+            reason: None,
+            pinned: false,
+            bytes,
+        };
+        Ok(AddEntryResult::stored_with(entry))
     }
 
-    fn insert_tombstone(&self, tool_id: &str, now_iso: &str, reason: &str) -> HistoryResult<()> {
+    fn insert_tombstone(
+        &self,
+        tool_id: &str,
+        now_iso: &str,
+        reason: &str,
+    ) -> HistoryResult<HistoryEntry> {
         let conn = self.lock_conn()?;
         conn.execute(
             "INSERT INTO entries (tool_id, timestamp, input, output, params, bytes, redacted, reason, pinned)
              VALUES (?1, ?2, NULL, NULL, NULL, 0, 1, ?3, 0)",
             params![tool_id, now_iso, reason],
         )?;
-        Ok(())
+        let id = conn.last_insert_rowid();
+        Ok(HistoryEntry {
+            id,
+            tool_id: tool_id.to_string(),
+            timestamp: now_iso.to_string(),
+            input: None,
+            output: None,
+            params: None,
+            redacted: true,
+            reason: Some(reason.to_string()),
+            pinned: false,
+            bytes: 0,
+        })
     }
 
     /// Evict the oldest unpinned entry for `tool_id` if the per-tool count
@@ -1189,9 +1247,16 @@ mod tests {
         let res = add_simple(&store, "json-formatter", "{\"a\":1}", "{\n  \"a\": 1\n}");
         assert!(res.stored);
         assert!(res.reason.is_none());
+        let returned = res.entry.expect("stored=true must echo back the inserted entry");
+        assert!(!returned.redacted);
+        assert_eq!(returned.tool_id, "json-formatter");
+        assert_eq!(returned.input.as_deref(), Some("{\"a\":1}"));
+        assert_eq!(returned.output.as_deref(), Some("{\n  \"a\": 1\n}"));
         let entries = store.list_entries(Some("json-formatter"), 10, None).unwrap();
         assert_eq!(entries.len(), 1);
         assert!(!entries[0].redacted);
+        // The id Rust returned in `entry` must match the canonical row id.
+        assert_eq!(entries[0].id, returned.id);
     }
 
     #[test]
@@ -1202,11 +1267,21 @@ mod tests {
         let res = add_simple(&store, "password-gen", "doesnt-matter", "doesnt-matter");
         assert!(res.stored, "tombstones ARE stored");
         assert_eq!(res.reason.as_deref(), Some("blocklisted"));
+        // Tombstone runs MUST also return the inserted entry so the frontend
+        // can render a lock-badge row immediately without a follow-up fetch.
+        let returned = res.entry.expect("tombstones must echo back the inserted entry");
+        assert!(returned.redacted);
+        assert!(returned.input.is_none());
+        assert!(returned.output.is_none());
+        assert_eq!(returned.bytes, 0);
+        assert_eq!(returned.reason.as_deref(), Some("blocklisted"));
+
         let entries = store.list_entries(Some("password-gen"), 10, None).unwrap();
         assert_eq!(entries.len(), 1);
         assert!(entries[0].redacted);
         assert!(entries[0].input.is_none());
         assert_eq!(entries[0].bytes, 0);
+        assert_eq!(entries[0].id, returned.id);
     }
 
     #[test]
@@ -1363,6 +1438,7 @@ mod tests {
         let res = add_simple(&store, "json-formatter", "x", "y");
         assert!(!res.stored);
         assert_eq!(res.reason.as_deref(), Some("paused"));
+        assert!(res.entry.is_none(), "rejected runs must not echo an entry");
     }
 
     #[test]
@@ -1374,6 +1450,7 @@ mod tests {
         let res = add_simple(&store, "json-formatter", &huge, "y");
         assert!(!res.stored);
         assert_eq!(res.reason.as_deref(), Some("size_cap"));
+        assert!(res.entry.is_none());
     }
 
     #[test]
@@ -1384,6 +1461,36 @@ mod tests {
         let res = add_simple(&store, "no-such-tool", "x", "y");
         assert!(!res.stored);
         assert_eq!(res.reason.as_deref(), Some("unknown_tool"));
+        assert!(res.entry.is_none());
+    }
+
+    #[test]
+    fn add_secret_in_input_echoes_tombstone_entry() {
+        // Sensitive-pattern tombstones must also echo back the inserted row
+        // so the frontend can render the lock-badge entry immediately.
+        let tmp = tempdir();
+        let ks = FakeKeyStore::new();
+        let store = make_store(tmp.path(), &ks);
+        let res = add_simple(
+            &store,
+            "json-formatter",
+            "key=AKIAIOSFODNN7EXAMPLE",
+            "result",
+        );
+        assert!(res.stored);
+        assert_eq!(res.reason.as_deref(), Some("sensitive_pattern:aws_access_key"));
+        let returned = res.entry.expect("tombstone must echo entry");
+        assert!(returned.redacted);
+        assert!(returned.input.is_none());
+        assert!(returned.output.is_none());
+        assert_eq!(
+            returned.reason.as_deref(),
+            Some("sensitive_pattern:aws_access_key"),
+        );
+        // The id must round-trip via list_entries.
+        let entries = store.list_entries(Some("json-formatter"), 10, None).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].id, returned.id);
     }
 
     #[test]

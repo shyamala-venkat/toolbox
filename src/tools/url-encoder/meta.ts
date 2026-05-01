@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'link-2',
   tier: 'free',
   requiresBackend: false,
+  historyKind: 'text',
 };

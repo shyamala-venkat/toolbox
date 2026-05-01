@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import cronstrue from 'cronstrue';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { meta } from './meta';
 import { parseCron, getNextRunTimes, CRON_PRESETS } from './cron';
 
@@ -78,6 +80,29 @@ function CronParser() {
 
   const combinedError = description.error ?? nextRuns.error;
   const isEmpty = !debouncedExpression.trim();
+
+  // History capture: input is the cron expression, output is the human
+  // description plus the next 10 runs as text.
+  const synthesizedOutput = useMemo(() => {
+    if (combinedError || !description.text) return '';
+    const header = description.text;
+    const runs = nextRuns.runs.map((d, i) => `${i + 1}. ${formatRunTime(d)}`).join('\n');
+    return runs.length > 0 ? `${header}\n\nNext runs:\n${runs}` : header;
+  }, [description.text, nextRuns.runs, combinedError]);
+  useHistoryCapture({
+    toolId: meta.id,
+    input: expression,
+    output: synthesizedOutput,
+    params: {},
+    enabled: !combinedError && expression.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setExpression(pendingRestore.input);
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   return (
     <ToolPage tool={meta}>

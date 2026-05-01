@@ -56,6 +56,7 @@ export function Sidebar() {
 
   return (
     <aside
+      aria-label="Sidebar"
       className="flex h-full shrink-0 flex-col"
       style={{
         width: collapsed ? SIDEBAR_COLLAPSED_WIDTH : expandedWidth,

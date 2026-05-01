@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { InputOutputLayout } from '@/components/tool/InputOutputLayout';
 import { Textarea } from '@/components/ui/Textarea';
@@ -7,6 +7,8 @@ import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { XCircle } from 'lucide-react';
 import { meta } from './meta';
 
@@ -183,6 +185,29 @@ function JsonToTypescript() {
 
   const isEmpty = input.trim().length === 0;
   const hasError = !isEmpty && result.error !== null;
+
+  // History capture: only successful conversions are eligible. Captured input
+  // is the raw JSON; output is the generated TS — both fit `historyKind: json`.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { rootName, style },
+    enabled: result.error === null && input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (typeof obj.rootName === 'string') setRootName(obj.rootName);
+      if (obj.style === 'interface' || obj.style === 'type') setStyle(obj.style);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const optionsBar = (
     <div

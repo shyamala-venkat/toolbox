@@ -45,8 +45,10 @@ test.describe('Dark/light mode', () => {
     await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
 
     // Verify key elements have non-transparent backgrounds (CSS variables are resolved)
-    // Check the sidebar has a background
-    const sidebar = page.locator('aside');
+    // Check the sidebar has a background. Tools may render their own
+    // <aside> (e.g. the right-side history drawer), so target the
+    // app-level sidebar by its aria-label.
+    const sidebar = page.locator('aside[aria-label="Sidebar"]');
     const sidebarBg = await sidebar.evaluate((el) => {
       const style = window.getComputedStyle(el);
       return style.backgroundColor;

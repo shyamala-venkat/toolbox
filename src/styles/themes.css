@@ -16,6 +16,10 @@
   --bg-tertiary: #eef0f4;
   --bg-elevated: #ffffff;
   --bg-overlay: rgba(15, 17, 21, 0.45);
+  /* History drawer surfaces — kept distinct so the drawer can sit on
+     a slightly recessed plane without disrupting tool-side surfaces. */
+  --surface-1: #f7f8fa;
+  --surface-hover: #eef0f4;
 
   /* text */
   --text-primary: #0f1115;
@@ -36,6 +40,9 @@
   --border-secondary: #eef0f4;
   --border-strong: #c9cdd6;
   --border-focus: #0d9488;
+  /* History row dividers — softer than --border-secondary so dense
+     row stacks don't read as a grid. */
+  --border-hairline: #ecedf1;
 
   /* status */
   --success: #16a34a;
@@ -76,6 +83,9 @@
   --bg-tertiary: #1d222b;
   --bg-elevated: #1a1f27;
   --bg-overlay: rgba(0, 0, 0, 0.6);
+  /* History drawer surfaces — see light-theme comment. */
+  --surface-1: #131720;
+  --surface-hover: #1d222b;
 
   /* text */
   --text-primary: #f5f6f8;
@@ -96,6 +106,8 @@
   --border-secondary: #1d222b;
   --border-strong: #3a4150;
   --border-focus: #2dd4bf;
+  /* History row dividers — see light-theme comment. */
+  --border-hairline: #1f242e;
 
   /* status */
   --success: #4ade80;

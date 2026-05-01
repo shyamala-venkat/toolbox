@@ -12,4 +12,6 @@ export const meta: ToolMeta = {
   icon: 'file-spreadsheet',
   tier: 'pro',
   requiresBackend: false,
+  // File-input + table editor — multi-pane state doesn't fit v1 contract.
+  historyEligible: false,
 };

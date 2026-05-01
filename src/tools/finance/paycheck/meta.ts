@@ -22,4 +22,6 @@ export const meta: ToolMeta = {
   icon: 'wallet',
   tier: 'pro',
   requiresBackend: true,
+  // Sensitive: salary + filing status is financial PII. Never persist.
+  sensitiveContent: true,
 };

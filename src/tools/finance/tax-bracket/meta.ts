@@ -21,4 +21,6 @@ export const meta: ToolMeta = {
   icon: 'percent',
   tier: 'pro',
   requiresBackend: true,
+  // Sensitive: gross income + filing status is financial PII. Never persist.
+  sensitiveContent: true,
 };

@@ -13,4 +13,7 @@ export const meta: ToolMeta = {
   icon: 'shield',
   tier: 'free',
   requiresBackend: false,
+  // Sensitive: routinely used to escape secrets/connection strings/passwords
+  // before pasting into config files. Treat input as confidential.
+  sensitiveContent: true,
 };

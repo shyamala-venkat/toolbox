@@ -8,6 +8,8 @@ import {
 } from 'react';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { CopyButton } from '@/components/ui/CopyButton';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 import {
@@ -273,6 +275,36 @@ function ColorConverter() {
 
   const hexForSwatch = formatHex(color);
   const pickerValue = toPickerHex(color);
+
+  // History capture: a "run" here is a chosen color. Use the canonical hex as
+  // both input and a labelled multi-format output (so the history viewer
+  // shows every representation at a glance).
+  const captureOutput = useMemo(
+    () =>
+      [
+        `HEX:  ${formatHex(color)}`,
+        `RGB:  ${formatRgb(color)}`,
+        `HSL:  ${formatHsl(color)}`,
+        `HSV:  ${formatHsv(color)}`,
+        `CMYK: ${formatCmyk(color)}`,
+      ].join('\n'),
+    [color],
+  );
+  useHistoryCapture({
+    toolId: meta.id,
+    input: hexForSwatch,
+    output: captureOutput,
+    params: {},
+    enabled: hexForSwatch.length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    const parsed = parseHex(pendingRestore.input);
+    if (parsed) setColor(parsed);
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const contrastVsWhite = useMemo(() => contrastGrades(color, WHITE), [color]);
   const contrastVsBlack = useMemo(() => contrastGrades(color, BLACK), [color]);

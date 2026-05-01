@@ -12,4 +12,7 @@ export const meta: ToolMeta = {
   icon: 'fingerprint',
   tier: 'free',
   requiresBackend: false,
+  // Generator without input — every run is the same kind of output (random
+  // UUIDs). Capturing them isn't useful. No v1 history drawer.
+  historyEligible: false,
 };

@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { formatBytes } from '@/lib/utils';
 import { meta } from './meta';
 
@@ -190,6 +192,31 @@ function GzipTool() {
   }, [result]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: text mode only — gzip-tool's file mode (if added later)
+  // would be excluded the same way. The output for compress is base64; for
+  // decompress it's plain text. Both fit the `text` history kind.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.kind === 'ok' ? result.output : '',
+    params: { direction },
+    enabled: result.kind === 'ok' && input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (obj.direction === 'compress' || obj.direction === 'decompress') {
+        setDirection(obj.direction);
+      }
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   // ─── Stats strip ──────────────────────────────────────────────────────────
 

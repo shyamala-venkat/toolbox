@@ -13,6 +13,7 @@ export const meta: ToolMeta = {
   icon: 'database',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'sql',
 };
 
 export const SQL_DIALECTS = [

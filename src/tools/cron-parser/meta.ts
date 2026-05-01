@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'timer',
   tier: 'free',
   requiresBackend: false,
+  historyKind: 'text',
 };

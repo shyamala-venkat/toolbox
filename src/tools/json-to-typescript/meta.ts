@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'file-code',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'json',
 };

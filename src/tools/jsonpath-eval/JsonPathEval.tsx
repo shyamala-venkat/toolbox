@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { JSONPath } from 'jsonpath-plus';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { InputOutputLayout } from '@/components/tool/InputOutputLayout';
@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { meta } from './meta';
 
 // ─── Common expressions ───────────────────────────────────────────────────
@@ -95,6 +97,33 @@ function JsonPathEval() {
   );
 
   const error = result.jsonError ?? result.pathError;
+
+  // History capture: input is the JSON document (the canonical, larger input
+  // worth saving); the path expression is in `params` so Restore reapplies
+  // both. Skip while either side errors or the path produces nothing.
+  useHistoryCapture({
+    toolId: meta.id,
+    input: jsonInput,
+    output: result.output,
+    params: { pathExpr },
+    enabled:
+      error === null &&
+      jsonInput.trim().length > 0 &&
+      pathExpr.trim().length > 0 &&
+      result.matchCount > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setJsonInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (typeof obj.pathExpr === 'string') setPathExpr(obj.pathExpr);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   // ─── Input panel ─────────────────────────────────────────────────────
 

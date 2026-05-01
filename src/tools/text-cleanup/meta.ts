@@ -12,4 +12,5 @@ export const meta: ToolMeta = {
   icon: 'eraser',
   tier: 'free',
   requiresBackend: false,
+  historyKind: 'text',
 };

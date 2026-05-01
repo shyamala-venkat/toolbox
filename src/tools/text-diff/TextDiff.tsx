@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Select } from '@/components/ui/Select';
 import { Toggle } from '@/components/ui/Toggle';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { cn } from '@/lib/utils';
 import { meta } from './meta';
@@ -367,6 +369,58 @@ function TextDiff() {
   );
 
   const hasInput = debouncedOriginal.length > 0 || debouncedChanged.length > 0;
+
+  // History capture: text-diff has TWO inputs. Serialize them as JSON so the
+  // capture hook (which expects a single `input` string) sees a stable, fully
+  // round-trippable representation. Output is the unified diff text — a
+  // human-readable rendering of the changes that the generic <HistoryViewer
+  // kind="diff"> can syntax-highlight.
+  const serializedInput = useMemo(
+    () => JSON.stringify({ original, changed }),
+    [original, changed],
+  );
+  const serializedOutput = useMemo(() => {
+    if (!hasInput) return '';
+    return changes
+      .flatMap((c) => {
+        const prefix = c.added ? '+' : c.removed ? '-' : ' ';
+        return splitIntoLines(c.value).map((line) => `${prefix}${line}`);
+      })
+      .join('\n');
+  }, [changes, hasInput]);
+  useHistoryCapture({
+    toolId: meta.id,
+    input: serializedInput,
+    output: serializedOutput,
+    params: { viewMode, granularity, ignoreWhitespace },
+    enabled: hasInput && (original.length > 0 || changed.length > 0),
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    try {
+      const parsed = JSON.parse(pendingRestore.input) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const obj = parsed as Record<string, unknown>;
+        if (typeof obj.original === 'string') setOriginal(obj.original);
+        if (typeof obj.changed === 'string') setChanged(obj.changed);
+      }
+    } catch {
+      // Fallback: treat the whole string as the "original" pane. Better than
+      // dropping the restore on the floor when an old serialization format is
+      // encountered.
+      setOriginal(pendingRestore.input);
+    }
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isViewMode(obj.viewMode)) setViewMode(obj.viewMode);
+      if (isGranularity(obj.granularity)) setGranularity(obj.granularity);
+      if (typeof obj.ignoreWhitespace === 'boolean') setIgnoreWhitespace(obj.ignoreWhitespace);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   // ─── Render ──────────────────────────────────────────────────────────────
 

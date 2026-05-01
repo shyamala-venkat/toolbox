@@ -23,4 +23,6 @@ export const meta: ToolMeta = {
   tier: 'free',
   requiresBackend: true,
   // Reads bundled FX snapshot via IPC (commands::finance::get_finance_dataset).
+  // Form-input calculator: no v1 history drawer.
+  historyEligible: false,
 };

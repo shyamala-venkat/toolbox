@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { meta } from './meta';
 import { computeStats, formatTime } from './stats';
 
@@ -45,6 +47,34 @@ function WordCounter() {
   const [input, setInput] = useState('');
 
   const stats = useMemo(() => computeStats(input), [input]);
+
+  // History capture: word-counter has no separate output panel. Synthesize a
+  // compact stats summary as the "output" so the history row is meaningful;
+  // restore re-applies the input text.
+  const synthesizedOutput =
+    input.trim().length > 0
+      ? [
+          `Words: ${stats.words}`,
+          `Characters: ${stats.characters}`,
+          `Sentences: ${stats.sentences}`,
+          `Paragraphs: ${stats.paragraphs}`,
+          `Reading time: ${formatTime(stats.readingTimeMinutes)}`,
+        ].join('\n')
+      : '';
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: synthesizedOutput,
+    params: {},
+    enabled: input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   return (
     <ToolPage tool={meta} fullWidth>

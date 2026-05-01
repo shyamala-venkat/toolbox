@@ -7,6 +7,8 @@ import { Select } from '@/components/ui/Select';
 import { Toggle } from '@/components/ui/Toggle';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { Textarea } from '@/components/ui/Textarea';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 
@@ -267,6 +269,39 @@ function LoremIpsum() {
     const safeCount = clamp(count, MIN_COUNT, MAX_COUNT);
     setOutput(generate(type, safeCount, startWithLorem));
   }, [type, count, startWithLorem]);
+
+  // History capture: lorem-ipsum has no real "input" — the generator settings
+  // are the request. Synthesize a stable, human-readable description so the
+  // history row is meaningful and the capture hook (which requires non-empty
+  // input) sees something. The full settings live in `params` for restore.
+  const synthesizedInput =
+    output.length > 0
+      ? `Generate ${count} ${type}${startWithLorem ? ' starting with "Lorem ipsum"' : ''}`
+      : '';
+  useHistoryCapture({
+    toolId: meta.id,
+    input: synthesizedInput,
+    output,
+    params: { type, count, startWithLorem },
+    enabled: output.length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isLoremType(obj.type)) setType(obj.type);
+      if (typeof obj.count === 'number' && Number.isFinite(obj.count)) {
+        const safe = clamp(Math.floor(obj.count), MIN_COUNT, MAX_COUNT);
+        setCount(safe);
+        setCountInput(String(safe));
+      }
+      if (typeof obj.startWithLorem === 'boolean') setStartWithLorem(obj.startWithLorem);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const handleCountChange = (raw: string): void => {
     setCountInput(raw);

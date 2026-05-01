@@ -37,8 +37,8 @@ pub const SENSITIVE_TOOLS: &[&str] = &[
     "hash-generator",
     "jwt-decoder",
     "backslash-escape",
-    "paycheck-calc",
-    "tax-bracket-estimator",
+    "paycheck",
+    "tax-bracket",
 ];
 
 /// Stable identifier for each pattern. Returned by `contains_secret` so the
@@ -144,8 +144,8 @@ mod tests {
         assert!(is_blocklisted_tool("hash-generator"));
         assert!(is_blocklisted_tool("jwt-decoder"));
         assert!(is_blocklisted_tool("backslash-escape"));
-        assert!(is_blocklisted_tool("paycheck-calc"));
-        assert!(is_blocklisted_tool("tax-bracket-estimator"));
+        assert!(is_blocklisted_tool("paycheck"));
+        assert!(is_blocklisted_tool("tax-bracket"));
     }
 
     #[test]
@@ -154,6 +154,16 @@ mod tests {
         assert!(!is_blocklisted_tool("base64"));
         assert!(!is_blocklisted_tool(""));
         assert!(!is_blocklisted_tool("nonexistent-tool"));
+    }
+
+    /// Negative test: the legacy/wrong ids that DON'T match the frontend
+    /// `meta.ts` registry must NOT be on the blocklist. If a future revert
+    /// re-introduces `paycheck-calc` or `tax-bracket-estimator`, this test
+    /// fails and the CI parity check catches it.
+    #[test]
+    fn blocklist_does_not_contain_legacy_ids() {
+        assert!(!is_blocklisted_tool("paycheck-calc"));
+        assert!(!is_blocklisted_tool("tax-bracket-estimator"));
     }
 
     #[test]

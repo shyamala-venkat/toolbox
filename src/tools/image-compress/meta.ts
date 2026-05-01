@@ -13,4 +13,6 @@ export const meta: ToolMeta = {
   icon: 'file-down',
   tier: 'free',
   requiresBackend: true,
+  // File-input/image tool: no v1 history drawer.
+  historyEligible: false,
 };

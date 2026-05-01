@@ -338,8 +338,8 @@ fn history_known_tool_ids() -> Vec<String> {
         "hash-generator",
         "jwt-decoder",
         "backslash-escape",
-        "paycheck-calc",
-        "tax-bracket-estimator",
+        "paycheck",
+        "tax-bracket",
     ]
     .into_iter()
     .map(String::from)

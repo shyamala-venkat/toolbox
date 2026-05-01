@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { Textarea } from '@/components/ui/Textarea';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { meta } from './meta';
 
 // Configure marked for GitHub Flavored Markdown
@@ -46,6 +48,23 @@ function MarkdownPreview() {
   }, [debouncedInput]);
 
   const isEmpty = input.trim().length === 0;
+
+  // History capture: input is the markdown source; output is the sanitized
+  // HTML so the detail panel viewer can render it as either text or HTML.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: sanitizedHtml,
+    params: {},
+    enabled: !isEmpty,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   return (
     <ToolPage tool={meta} fullWidth>

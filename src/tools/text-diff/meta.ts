@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'diff',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'diff',
 };

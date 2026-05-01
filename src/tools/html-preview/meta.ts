@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'eye',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'html',
 };

@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Info } from 'lucide-react';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { Button } from '@/components/ui/Button';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { cn } from '@/lib/utils';
 import { meta } from './meta';
 
@@ -176,6 +178,42 @@ function NumberBase() {
     () => BASE_ORDER.some((id) => values[id].length > 0),
     [values],
   );
+
+  // History capture: number-base has 4 linked fields. Use the decimal value
+  // as the canonical input (it's the format with full sign support and the
+  // most common starting point) and a labelled multi-line summary as the
+  // output. Skip while any field is errored.
+  const hasErrors = useMemo(
+    () => BASE_ORDER.some((id) => errors[id] !== null),
+    [errors],
+  );
+  const captureInput = values.dec;
+  const captureOutput = useMemo(() => {
+    if (hasErrors || !hasAnyValue) return '';
+    return [
+      `Decimal: ${values.dec}`,
+      `Binary:  ${values.bin}`,
+      `Octal:   ${values.oct}`,
+      `Hex:     ${values.hex}`,
+    ].join('\n');
+  }, [values, hasErrors, hasAnyValue]);
+  useHistoryCapture({
+    toolId: meta.id,
+    input: captureInput,
+    output: captureOutput,
+    params: {},
+    enabled: !hasErrors && captureInput.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    // Treat the restore input as a decimal value and let handleChange
+    // recompute the other fields. If parsing fails, the field-level error
+    // surface is the same as a manual paste.
+    handleChange('dec', pendingRestore.input);
+    consumeRestore();
+  }, [pendingRestore, consumeRestore, handleChange]);
 
   // ─── Sub-renders ──────────────────────────────────────────────────────────
 

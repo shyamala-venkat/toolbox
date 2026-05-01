@@ -15,6 +15,8 @@ import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 
@@ -211,6 +213,32 @@ function YamlJson() {
   }, [direction, indent, multiDoc]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: only successful conversions are eligible.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { direction, indent, multiDoc },
+    enabled: result.error === null && input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isDirection(obj.direction)) {
+        setDirection(obj.direction);
+        setDirectionLocked(true);
+      }
+      if (isIndent(obj.indent)) setIndent(obj.indent);
+      if (typeof obj.multiDoc === 'boolean') setMultiDoc(obj.multiDoc);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const handleSwap = useCallback(() => {
     // Swap by moving the current output into the input and flipping the

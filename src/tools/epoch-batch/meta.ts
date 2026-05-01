@@ -13,4 +13,7 @@ export const meta: ToolMeta = {
   icon: 'list',
   tier: 'pro',
   requiresBackend: false,
+  // Per the v1 plan: epoch-batch (csv-style multi-line input) is excluded
+  // from history. No v1 history drawer.
+  historyEligible: false,
 };

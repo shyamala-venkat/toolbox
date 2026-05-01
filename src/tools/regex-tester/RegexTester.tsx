@@ -4,6 +4,8 @@ import { ToolPage } from '@/components/tool/ToolPage';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { cn } from '@/lib/utils';
 import { meta } from './meta';
@@ -344,6 +346,46 @@ function RegexTester() {
         });
       });
   }, [debouncedPattern, flags, mode, debouncedInput, debouncedReplacement]);
+
+  // History capture: input is the test string. Output is a mode-specific
+  // summary (matches list, replacement result, or split parts). Pattern,
+  // flags, and mode live in `params` so Restore re-applies the full setup.
+  const synthesizedOutput = useMemo(() => {
+    if (run.status !== 'ok') return '';
+    if (mode === 'match') {
+      if (run.matches.length === 0) return '';
+      return run.matches
+        .map((m, i) => `#${i + 1} @ ${m.index}: ${m.match || '(empty)'}`)
+        .join('\n');
+    }
+    if (mode === 'replace') return run.replaceResult;
+    return run.splitResult.map((p, i) => `${i}: ${p}`).join('\n');
+  }, [run, mode]);
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: synthesizedOutput,
+    params: { pattern, flags, mode, ...(mode === 'replace' ? { replacement } : {}) },
+    enabled:
+      run.status === 'ok' &&
+      pattern.trim().length > 0 &&
+      input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (typeof obj.pattern === 'string') setPattern(obj.pattern);
+      if (typeof obj.flags === 'string') setFlags(normalizeFlags(obj.flags));
+      if (isRegexMode(obj.mode)) setMode(obj.mode);
+      if (typeof obj.replacement === 'string') setReplacement(obj.replacement);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const toggleFlag = useCallback((flag: Flag): void => {
     setFlags((prev) => {

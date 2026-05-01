@@ -13,4 +13,6 @@ export const meta: ToolMeta = {
   icon: 'ruler',
   tier: 'free',
   requiresBackend: false,
+  // Visual measurement tool — no text I/O. No v1 history drawer.
+  historyEligible: false,
 };

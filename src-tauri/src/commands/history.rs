@@ -77,6 +77,7 @@ pub async fn add_history_entry(
         return Ok(AddEntryResult {
             stored: false,
             reason: Some("size_cap".to_string()),
+            entry: None,
         });
     }
     let store = store(&state)?;

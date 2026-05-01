@@ -14,6 +14,9 @@ export const meta: ToolMeta = {
   icon: 'hash',
   tier: 'free',
   requiresBackend: true,
+  // Sensitive: hash inputs frequently include credentials, tokens, or files
+  // the user is integrity-checking. Never persist.
+  sensitiveContent: true,
 };
 
 export const HASH_ALGORITHMS = [

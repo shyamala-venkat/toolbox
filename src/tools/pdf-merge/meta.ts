@@ -12,4 +12,6 @@ export const meta: ToolMeta = {
   icon: 'file-plus-2',
   tier: 'free',
   requiresBackend: false,
+  // File-input tool: no v1 history drawer (file bytes don't fit text capture).
+  historyEligible: false,
 };

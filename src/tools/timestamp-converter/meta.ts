@@ -17,4 +17,7 @@ export const meta: ToolMeta = {
     patterns: [/^\s*\d{10}(\d{3})?\s*$/],
     priority: 8,
   },
+  // Form-style calculator with multiple linked outputs (no canonical
+  // text-in/text-out shape). No v1 history drawer.
+  historyEligible: false,
 };

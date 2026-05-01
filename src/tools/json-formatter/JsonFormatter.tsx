@@ -8,6 +8,8 @@ import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { JsonTreeView } from './JsonTreeView';
 import { meta } from './meta';
@@ -211,6 +213,40 @@ function JsonFormatter() {
   }, [indent, sortKeys, minify, viewMode]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // ─── History wiring ──────────────────────────────────────────────────────
+  //
+  // Capture successful runs (parsed cleanly, non-empty input/output). The
+  // hook handles debouncing, sensitive-pattern detection, and silent IPC
+  // failure — we just declare what counts as a "completed run".
+  const captureEnabled = result.error === null && input.trim().length > 0;
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { indent, sortKeys, minify, viewMode },
+    enabled: captureEnabled,
+  });
+
+  // When the user picks an entry from the drawer's detail panel and clicks
+  // "Restore", that flows through the HistoryRestoreContext. We apply the
+  // input here and consume the pending restore so subsequent drawer
+  // interactions don't replay it.
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    // Apply persisted params if they look like our shape — purely opportunistic.
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isIndentChoice(obj.indent)) setIndent(obj.indent);
+      if (typeof obj.sortKeys === 'boolean') setSortKeys(obj.sortKeys);
+      if (typeof obj.minify === 'boolean') setMinify(obj.minify);
+      if (isViewMode(obj.viewMode)) setViewMode(obj.viewMode);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const inputLines = countLines(input);
   const outputLines = countLines(result.output);
@@ -461,7 +497,7 @@ function JsonFormatter() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <ToolPage tool={meta} fullWidth>
+    <ToolPage tool={meta} fullWidth currentInput={input}>
       {optionsBar}
       <InputOutputLayout
         input={inputPanel}

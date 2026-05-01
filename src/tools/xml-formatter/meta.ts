@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'code-xml',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'xml',
 };

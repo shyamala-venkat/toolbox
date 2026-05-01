@@ -7,6 +7,8 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 import { cleanupText, sanitizeCleanupOptions, type CleanupOptions } from './cleanup';
@@ -46,6 +48,28 @@ function TextCleanup() {
   }, []);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: cleanup never throws — capture whenever there's input
+  // and produced output.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { ...options },
+    enabled: input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    // The cleanup options sanitizer already validates each field, so let it
+    // do the work and we apply the result.
+    if (pendingRestore.params && typeof pendingRestore.params === 'object') {
+      setOptions(sanitizeCleanupOptions(pendingRestore.params));
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   // ─── Stats line ────────────────────────────────────────────────────────
 

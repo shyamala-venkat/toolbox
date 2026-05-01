@@ -14,4 +14,5 @@ export const meta: ToolMeta = {
   icon: 'regex',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'regex',
 };

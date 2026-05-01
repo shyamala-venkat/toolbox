@@ -13,6 +13,8 @@ export const meta: ToolMeta = {
   icon: 'scan',
   tier: 'pro',
   requiresBackend: true,
+  // File-input/image tool: no v1 history drawer.
+  historyEligible: false,
 };
 
 /** EXIF tag prefixes that indicate sensitive/privacy-relevant data. */

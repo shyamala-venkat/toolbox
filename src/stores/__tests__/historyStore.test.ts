@@ -6,6 +6,10 @@ vi.mock('@/lib/tauri', () => ({
   setHistoryRetention: vi.fn(),
   clearHistory: vi.fn(),
   historyStorageStats: vi.fn(),
+  listHistory: vi.fn(),
+  getHistoryEntry: vi.fn(),
+  deleteHistoryEntry: vi.fn(),
+  pinHistoryEntry: vi.fn(),
 }));
 
 import {
@@ -13,6 +17,11 @@ import {
   setHistoryRetention as mockSetRetention,
   clearHistory as mockClearHistory,
   historyStorageStats as mockStorageStats,
+  listHistory as mockListHistory,
+  getHistoryEntry as mockGetEntry,
+  deleteHistoryEntry as mockDeleteEntry,
+  pinHistoryEntry as mockPinEntry,
+  type HistoryEntry,
   type StorageStats,
 } from '@/lib/tauri';
 import { useHistoryStore } from '@/stores/historyStore';
@@ -56,7 +65,11 @@ const resetHistoryStore = (): void => {
     retention: '7d',
     stats: null,
     firstBlockToastDismissed: false,
+    firstBlockToastShown: false,
     isStatsLoading: false,
+    entriesByTool: {},
+    fetchingByTool: {},
+    errorByTool: {},
   });
 };
 
@@ -225,6 +238,226 @@ describe('historyStore.dismissFirstBlockToast', () => {
 
     // Same reference — the second call did not push another update.
     expect(useSettingsStore.getState().preferences).toBe(settingsBefore);
+  });
+});
+
+// ─── Row-list actions (PR-B.1) ─────────────────────────────────────────
+
+const makeEntry = (overrides: Partial<HistoryEntry> = {}): HistoryEntry => ({
+  id: 1,
+  tool_id: 'json-formatter',
+  timestamp: '2026-04-30T12:00:00Z',
+  input: 'preview',
+  output: 'preview',
+  params: {},
+  redacted: false,
+  reason: null,
+  pinned: false,
+  bytes: 14,
+  ...overrides,
+});
+
+describe('historyStore.fetchEntries', () => {
+  it('hydrates the per-tool slice with the IPC response', async () => {
+    const rows = [makeEntry({ id: 7 }), makeEntry({ id: 6 })];
+    vi.mocked(mockListHistory).mockResolvedValueOnce(rows);
+
+    await useHistoryStore.getState().fetchEntries('json-formatter');
+
+    expect(mockListHistory).toHaveBeenCalledWith({ toolId: 'json-formatter', limit: 50 });
+    expect(useHistoryStore.getState().entriesByTool['json-formatter']).toEqual(rows);
+  });
+
+  it('skips a concurrent fetch for the same tool', async () => {
+    let resolveFn!: (rows: HistoryEntry[]) => void;
+    const pending = new Promise<HistoryEntry[]>((r) => {
+      resolveFn = r;
+    });
+    vi.mocked(mockListHistory).mockImplementationOnce(() => pending);
+
+    const first = useHistoryStore.getState().fetchEntries('json-formatter');
+    const second = useHistoryStore.getState().fetchEntries('json-formatter');
+
+    expect(mockListHistory).toHaveBeenCalledTimes(1);
+    resolveFn([]);
+    await first;
+    await second;
+  });
+
+  it('leaves the slice unchanged on IPC failure', async () => {
+    useHistoryStore.setState({
+      entriesByTool: { 'json-formatter': [makeEntry({ id: 1 })] },
+    });
+    vi.mocked(mockListHistory).mockRejectedValueOnce('keychain locked');
+
+    await useHistoryStore.getState().fetchEntries('json-formatter');
+
+    expect(
+      useHistoryStore.getState().entriesByTool['json-formatter']?.[0]?.id,
+    ).toBe(1);
+  });
+
+  it('records an error and clears the in-flight flag on IPC failure', async () => {
+    // C4: a failed fetch must NOT leave `fetchingByTool` set — the drawer
+    // would render its skeleton forever. The error message lands in
+    // `errorByTool` so the drawer can render its retry branch instead.
+    vi.mocked(mockListHistory).mockRejectedValueOnce('keychain locked');
+
+    await useHistoryStore.getState().fetchEntries('json-formatter');
+
+    expect(useHistoryStore.getState().fetchingByTool['json-formatter']).toBe(false);
+    expect(useHistoryStore.getState().errorByTool['json-formatter']).toBe('keychain locked');
+  });
+});
+
+describe('historyStore.retryFetch', () => {
+  it('clears the recorded error and refires the IPC', async () => {
+    useHistoryStore.setState({
+      errorByTool: { 'json-formatter': 'keychain locked' },
+    });
+    vi.mocked(mockListHistory).mockResolvedValueOnce([makeEntry({ id: 7 })]);
+
+    await useHistoryStore.getState().retryFetch('json-formatter');
+
+    expect(mockListHistory).toHaveBeenCalledWith({
+      toolId: 'json-formatter',
+      limit: 50,
+    });
+    expect(useHistoryStore.getState().errorByTool['json-formatter']).toBeNull();
+    expect(
+      useHistoryStore.getState().entriesByTool['json-formatter']?.map((r) => r.id),
+    ).toEqual([7]);
+  });
+
+  it('re-records the error if the retry also fails', async () => {
+    useHistoryStore.setState({
+      errorByTool: { 'json-formatter': 'keychain locked' },
+    });
+    vi.mocked(mockListHistory).mockRejectedValueOnce('still locked');
+
+    await useHistoryStore.getState().retryFetch('json-formatter');
+
+    expect(useHistoryStore.getState().errorByTool['json-formatter']).toBe('still locked');
+  });
+});
+
+describe('historyStore.addEntry', () => {
+  it('prepends to the existing slice', () => {
+    useHistoryStore.setState({
+      entriesByTool: { 'json-formatter': [makeEntry({ id: 1 })] },
+    });
+
+    useHistoryStore.getState().addEntry('json-formatter', makeEntry({ id: 2 }));
+
+    expect(
+      useHistoryStore.getState().entriesByTool['json-formatter']?.map((r) => r.id),
+    ).toEqual([2, 1]);
+  });
+
+  it('is a no-op when the slice was never fetched', () => {
+    useHistoryStore.getState().addEntry('json-formatter', makeEntry({ id: 99 }));
+
+    // Stays undefined so the next fetch is the source of truth.
+    expect(useHistoryStore.getState().entriesByTool['json-formatter']).toBeUndefined();
+  });
+
+  it('replaces a row with the same id rather than duplicating', () => {
+    useHistoryStore.setState({
+      entriesByTool: { 'json-formatter': [makeEntry({ id: 5, output: 'old' })] },
+    });
+
+    useHistoryStore
+      .getState()
+      .addEntry('json-formatter', makeEntry({ id: 5, output: 'new' }));
+
+    const slice = useHistoryStore.getState().entriesByTool['json-formatter'] ?? [];
+    expect(slice).toHaveLength(1);
+    expect(slice[0]?.output).toBe('new');
+  });
+});
+
+describe('historyStore.removeEntry', () => {
+  it('removes the row optimistically and calls delete IPC', async () => {
+    useHistoryStore.setState({
+      entriesByTool: {
+        'json-formatter': [makeEntry({ id: 1 }), makeEntry({ id: 2 })],
+      },
+    });
+    vi.mocked(mockDeleteEntry).mockResolvedValueOnce(undefined);
+
+    await useHistoryStore.getState().removeEntry('json-formatter', 1);
+
+    expect(mockDeleteEntry).toHaveBeenCalledWith(1);
+    expect(
+      useHistoryStore.getState().entriesByTool['json-formatter']?.map((r) => r.id),
+    ).toEqual([2]);
+  });
+
+  it('rolls back on failure', async () => {
+    useHistoryStore.setState({
+      entriesByTool: { 'json-formatter': [makeEntry({ id: 1 })] },
+    });
+    vi.mocked(mockDeleteEntry).mockRejectedValueOnce('disk error');
+
+    await useHistoryStore.getState().removeEntry('json-formatter', 1);
+
+    expect(useHistoryStore.getState().entriesByTool['json-formatter']).toHaveLength(1);
+    expect(useAppStore.getState().toast?.type).toBe('error');
+  });
+});
+
+describe('historyStore.togglePin', () => {
+  it('flips pinned in place and calls pin IPC', async () => {
+    useHistoryStore.setState({
+      entriesByTool: { 'json-formatter': [makeEntry({ id: 1, pinned: false })] },
+    });
+    vi.mocked(mockPinEntry).mockResolvedValueOnce({ ok: true, reason: null });
+
+    await useHistoryStore.getState().togglePin('json-formatter', 1);
+
+    expect(mockPinEntry).toHaveBeenCalledWith(1, true);
+    expect(
+      useHistoryStore.getState().entriesByTool['json-formatter']?.[0]?.pinned,
+    ).toBe(true);
+  });
+
+  it('shows pin-cap toast and rolls back when ok=false reason=pin_cap', async () => {
+    useHistoryStore.setState({
+      entriesByTool: { 'json-formatter': [makeEntry({ id: 1, pinned: false })] },
+    });
+    vi.mocked(mockPinEntry).mockResolvedValueOnce({ ok: false, reason: 'pin_cap' });
+
+    await useHistoryStore.getState().togglePin('json-formatter', 1);
+
+    expect(
+      useHistoryStore.getState().entriesByTool['json-formatter']?.[0]?.pinned,
+    ).toBe(false);
+    expect(useAppStore.getState().toast?.message).toBe('Unpin one to pin another.');
+  });
+
+  it('is a no-op when the slice is missing', async () => {
+    await useHistoryStore.getState().togglePin('unknown-tool', 1);
+    expect(mockPinEntry).not.toHaveBeenCalled();
+  });
+});
+
+describe('historyStore.getDetailEntry', () => {
+  it('returns the entry from the IPC', async () => {
+    const entry = makeEntry({ id: 9 });
+    vi.mocked(mockGetEntry).mockResolvedValueOnce(entry);
+
+    const result = await useHistoryStore.getState().getDetailEntry(9);
+
+    expect(result).toEqual(entry);
+  });
+
+  it('returns null on IPC failure (silent)', async () => {
+    vi.mocked(mockGetEntry).mockRejectedValueOnce('decrypt error');
+
+    const result = await useHistoryStore.getState().getDetailEntry(9);
+
+    expect(result).toBeNull();
+    expect(useAppStore.getState().toast).toBeNull();
   });
 });
 

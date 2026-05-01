@@ -4,6 +4,12 @@
 > 5 design decisions + 6 architecture decisions resolved with the user.
 > Codex outside-voice review caught 10 additional gaps; all incorporated below.
 
+## Implementation Status
+
+- **PR-A — COMPLETE** (commit `ab2363f`): SQLCipher-encrypted storage layer, 9 IPC commands, secret-pattern detection, retention sweep, Settings → History panel.
+- **PR-B — COMPLETE** (this commit): right-side `Drawer` mounted by `ToolPage`, `DetailPanel` with Restore/Pin/Delete, shared `useHistoryCapture()` hook, `HistoryRestoreContext` for cross-tree restore, ~22 text-eligible tools wired, blocklist parity enforced via Rust integration test (`src-tauri/tests/blocklist_parity.rs`), Playwright E2E coverage for drawer/Settings/regression smoke.
+- **Activity page (cross-tool view) — DEFERRED to v2** per the plan (D5, C5).
+
 ## What we're building
 
 Persistent per-tool history for **text-in/text-out tools** (~35 of 68 in v1). Every

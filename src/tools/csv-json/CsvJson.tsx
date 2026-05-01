@@ -8,6 +8,8 @@ import { Toggle } from '@/components/ui/Toggle';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 
@@ -171,6 +173,34 @@ function CsvJson() {
   }, [direction, header, prettyPrint]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: only successful conversions are eligible. The capture
+  // input is the source pane (CSV or JSON depending on direction), output is
+  // the converted result.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { direction, header, prettyPrint },
+    enabled: result.error === null && input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isDirection(obj.direction)) {
+        setDirection(obj.direction);
+        setDirectionLocked(true);
+      }
+      if (typeof obj.header === 'boolean') setHeader(obj.header);
+      if (typeof obj.prettyPrint === 'boolean') setPrettyPrint(obj.prettyPrint);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const handleSwap = useCallback(() => {
     if (result.output.length === 0) {

@@ -13,4 +13,8 @@ export const meta: ToolMeta = {
   icon: 'file-text',
   tier: 'pro',
   requiresBackend: false,
+  // PDF export side effect: input is markdown text but output is a binary PDF
+  // — doesn't fit the text-in/text-out v1 contract. Markdown Preview (in
+  // a separate tool) covers history for the markdown text itself.
+  historyEligible: false,
 };

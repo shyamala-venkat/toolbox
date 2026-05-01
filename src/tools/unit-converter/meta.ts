@@ -12,4 +12,6 @@ export const meta: ToolMeta = {
   icon: 'ruler',
   tier: 'free',
   requiresBackend: false,
+  // Form-input calculator: no v1 history drawer.
+  historyEligible: false,
 };

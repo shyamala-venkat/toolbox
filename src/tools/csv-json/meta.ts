@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'file-spreadsheet',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'csv',
 };

@@ -13,4 +13,5 @@ export const meta: ToolMeta = {
   icon: 'archive',
   tier: 'pro',
   requiresBackend: false,
+  historyKind: 'text',
 };

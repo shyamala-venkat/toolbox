@@ -13,4 +13,6 @@ export const meta: ToolMeta = {
   icon: 'globe',
   tier: 'free',
   requiresBackend: false,
+  // Visual/file-output tool: no v1 history drawer.
+  historyEligible: false,
 };

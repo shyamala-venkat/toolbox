@@ -13,4 +13,6 @@ export const meta: ToolMeta = {
   icon: 'qr-code',
   tier: 'pro',
   requiresBackend: false,
+  // Visual/image output: no v1 history drawer.
+  historyEligible: false,
 };

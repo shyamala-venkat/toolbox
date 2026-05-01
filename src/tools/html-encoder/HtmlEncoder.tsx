@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 
@@ -181,6 +183,29 @@ function HtmlEncoder() {
   }, [output]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: encode/decode never throws, so any non-empty input
+  // with non-empty output is a successful run.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output,
+    params: { direction, level },
+    enabled: input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isDirection(obj.direction)) setDirection(obj.direction);
+      if (isLevel(obj.level)) setLevel(obj.level);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   // ─── Options bar ──────────────────────────────────────────────────────────
 

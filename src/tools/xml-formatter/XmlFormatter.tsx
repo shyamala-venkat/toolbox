@@ -7,6 +7,8 @@ import { Select } from '@/components/ui/Select';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useHistoryCapture } from '@/hooks/useHistoryCapture';
+import { useHistoryRestore } from '@/contexts/HistoryRestoreContext';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { meta } from './meta';
 import { formatXml, minifyXml, type XmlIndent } from './format';
@@ -84,6 +86,28 @@ function XmlFormatter() {
   }, [mode, indent]);
 
   const handleClear = useCallback(() => setInput(''), []);
+
+  // History capture: only successful runs are eligible.
+  useHistoryCapture({
+    toolId: meta.id,
+    input,
+    output: result.output,
+    params: { mode, indent },
+    enabled: result.error === null && input.trim().length > 0,
+  });
+
+  const { pending: pendingRestore, consume: consumeRestore } = useHistoryRestore();
+  useEffect(() => {
+    if (!pendingRestore) return;
+    setInput(pendingRestore.input);
+    const p = pendingRestore.params;
+    if (p && typeof p === 'object' && !Array.isArray(p)) {
+      const obj = p as Record<string, unknown>;
+      if (isMode(obj.mode)) setMode(obj.mode);
+      if (isIndent(obj.indent)) setIndent(obj.indent);
+    }
+    consumeRestore();
+  }, [pendingRestore, consumeRestore]);
 
   const isEmpty = input.trim().length === 0;
   const hasError = !isEmpty && result.error !== null;
