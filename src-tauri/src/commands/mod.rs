@@ -4,6 +4,7 @@
 pub mod crypto;
 pub mod file_ops;
 pub mod finance;
+pub mod history;
 pub mod image_ops;
 pub mod keychain;
 pub mod preferences;

@@ -2,3 +2,4 @@
 
 pub mod input_validation;
 pub mod rate_limiter;
+pub mod redaction;

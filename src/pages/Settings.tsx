@@ -12,6 +12,7 @@ import { useToolStore } from '@/stores/toolStore';
 import { getAppVersion } from '@/lib/tauri';
 import { APP_VERSION } from '@/lib/constants';
 import { ACCENT_PRESETS } from '@/lib/accents';
+import { HistorySettingsPanel } from '@/components/history/SettingsPanel';
 
 // How long the "reset all preferences" confirm state stays armed before it
 // auto-reverts. Matches the ApiKeyInput delete confirm — a dangerous action
@@ -240,6 +241,8 @@ export function Settings() {
           description="Hide the window instead of quitting when you close it. Access ToolBox from the menu bar icon or with Cmd+Shift+T."
         />
       </SettingsSection>
+
+      <HistorySettingsPanel />
 
       <SettingsSection
         title="AI Features (BYOK)"

@@ -16,11 +16,17 @@ use commands::{
     finance::{
         get_finance_dataset, import_fx_snapshot, import_tax_snapshot, reset_finance_overlay,
     },
+    history::{
+        add_history_entry, clear_history, delete_history_entry, get_history_entry,
+        history_storage_stats, list_history, pin_history_entry, set_history_paused,
+        set_history_retention, HistoryState,
+    },
     image_ops::{convert_image, get_image_info, read_exif, resize_image, strip_exif},
     keychain::{delete_api_key, get_api_key, get_api_key_summary, store_api_key},
     preferences::{check_preferences_recovery, dismiss_preferences_recovery, get_preferences, set_preferences},
     system::{get_app_version, get_arch, get_platform},
 };
+use storage::history::{HistoryStore, OsKeyStore, Retention};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::Manager;
@@ -120,8 +126,72 @@ pub fn run() {
             import_fx_snapshot,
             import_tax_snapshot,
             reset_finance_overlay,
+            // history
+            add_history_entry,
+            list_history,
+            get_history_entry,
+            delete_history_entry,
+            clear_history,
+            pin_history_entry,
+            set_history_paused,
+            set_history_retention,
+            history_storage_stats,
         ])
         .setup(|app| {
+            // ── History store init (encrypted SQLite via SQLCipher) ──────
+            //
+            // Failure here is non-fatal: if the keychain is locked or the
+            // DB cannot be opened, the rest of the app still works and the
+            // history drawer renders its disabled state. The store is held
+            // in Tauri-managed state so command handlers can find it.
+            let history_state = match app.path().app_data_dir() {
+                Ok(dir) => {
+                    // Read persisted history preferences once at startup so
+                    // pause/retention survive restarts (H1). Defaults to
+                    // unpaused + 7-day retention if the file is missing or
+                    // the field is corrupted (Retention::parse rejects bad
+                    // strings — fall back rather than panic).
+                    let prefs = storage::preferences::load(&dir);
+                    let initial_paused = prefs.history.paused;
+                    let initial_retention = Retention::parse(&prefs.history.retention)
+                        .unwrap_or(Retention::SevenDays);
+                    match HistoryStore::open(
+                        &dir,
+                        &OsKeyStore,
+                        history_known_tool_ids(),
+                        initial_paused,
+                        initial_retention,
+                    ) {
+                        Ok(store) => HistoryState(Some(store)),
+                        Err(e) => {
+                            eprintln!("[toolbox] history store unavailable: {e}");
+                            HistoryState(None)
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[toolbox] history store unavailable (no app data dir): {e}");
+                    HistoryState(None)
+                }
+            };
+            app.manage(history_state);
+
+            // Background the startup TTL sweep (M5). On a populated 50 MB
+            // store the sweep can take noticeable time; running it inline
+            // here would block the setup hook and add visible latency to
+            // first paint. `spawn_blocking` is the right primitive: the
+            // store holds a sync `Mutex` and rusqlite calls are blocking.
+            // Fire-and-forget — failures are logged inside the closure.
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                let state = app_handle.state::<HistoryState>();
+                if let HistoryState(Some(ref store_ref)) = *state {
+                    if let Err(e) = store_ref.ttl_sweep() {
+                        eprintln!("[toolbox] history TTL sweep failed at startup: {e}");
+                    }
+                }
+            });
+
             // ── Tray icon (created purely via TrayIconBuilder) ───────────
             let show_item = MenuItem::with_id(app, "show", "Show ToolBox", true, None::<&str>)?;
             let separator = PredefinedMenuItem::separator(app)?;
@@ -219,4 +289,59 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+/// Allowlist of tool ids that the history store will accept writes for.
+///
+/// This is the Rust-side mirror of the TypeScript tool registry and acts as
+/// a defense-in-depth gate on `add_history_entry`: even if a renderer-side
+/// XSS bug tried to write under a fabricated id, the IPC handler short-
+/// circuits with `unknown_tool`. PR-B will replace this hardcoded list with
+/// a CI-generated list derived from `src/tools/*/meta.ts`.
+fn history_known_tool_ids() -> Vec<String> {
+    [
+        // Free + pro text-in/text-out tools that get a drawer in v1.
+        "json-formatter",
+        "base64",
+        "url-encoder",
+        "html-encoder",
+        "text-cleanup",
+        "lorem-ipsum",
+        "word-counter",
+        "color-converter",
+        "color-palette",
+        "number-base",
+        "csv-json",
+        "csv-viewer",
+        "cron-parser",
+        "jsonpath-eval",
+        "html-preview",
+        "markdown-preview",
+        "sql-formatter",
+        "yaml-json",
+        "xml-formatter",
+        "regex-tester",
+        "text-diff",
+        "json-to-typescript",
+        "gzip-tool",
+        "text-case",
+        "uuid-generator",
+        "timestamp-converter",
+        "unix-permissions",
+        "epoch-batch",
+        // Sensitive-content tools still need to appear here so the IPC
+        // accepts the write and the store can convert it to a tombstone
+        // (defense-in-depth). Otherwise we'd silently drop with
+        // `unknown_tool` instead of leaving the audit trail.
+        "password-gen",
+        "password-checker",
+        "hash-generator",
+        "jwt-decoder",
+        "backslash-escape",
+        "paycheck-calc",
+        "tax-bracket-estimator",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect()
 }

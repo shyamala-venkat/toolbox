@@ -103,9 +103,9 @@ This is non-negotiable because:
 src-tauri/                      # Rust backend
 ├── src/
 │   ├── lib.rs                  # App setup, plugins, menu, command registration
-│   ├── commands/               # Tauri IPC handlers (crypto, file_ops, keychain, preferences, system)
-│   ├── security/               # Input validators (path canonicalization + deny list), rate limiter
-│   └── storage/                # Preferences I/O (atomic writes, .bad recovery)
+│   ├── commands/               # Tauri IPC handlers (crypto, file_ops, keychain, preferences, system, history)
+│   ├── security/               # Input validators (path canonicalization + deny list), rate limiter, redaction (gitleaks-derived RegexSet + sensitive-tool blocklist)
+│   └── storage/                # Preferences I/O (atomic writes, .bad recovery), history.rs (SQLCipher-encrypted execution history; same .bad recovery pattern; separate failure path for keychain unavailability)
 ├── capabilities/default.json   # Tauri permission scoping (tight — no shell, no http)
 └── tauri.conf.json             # CSP, window config, bundler
 
@@ -114,15 +114,16 @@ src/                            # React frontend
 ├── components/
 │   ├── ui/                     # Primitives: Button, Input, Textarea, CopyButton, Toggle, Toast, ...
 │   ├── tool/                   # ToolPage wrapper, InputOutputLayout, error boundary
+│   ├── history/                # SettingsPanel (Settings → History section). Drawer + DetailPanel + RowItem land in PR-B.
 │   └── settings/               # ApiKeyInput (masked, reveal-with-timeout)
 ├── tools/                      # === EACH TOOL IS A SELF-CONTAINED FOLDER ===
 │   ├── registry.ts             # All 68 tools registered with lazy() imports + synonym search
-│   ├── types.ts                # ToolDefinition, ToolMeta, ToolCategory
+│   ├── types.ts                # ToolDefinition, ToolMeta (incl. sensitiveContent / historyEligible / historyKind), ToolCategory
 │   └── <tool-id>/              # meta.ts + Component.tsx (+ optional helpers)
 ├── pages/                      # Home, AllTools, Settings, NotFound, ToolRoute
-├── stores/                     # Zustand: appStore, toolStore, settingsStore
-├── hooks/                      # useClipboard, useKeyboardShortcut, useDebounce, ...
-├── lib/                        # tauri.ts (typed IPC wrappers), icons.ts, utils.ts
+├── stores/                     # Zustand: appStore, toolStore, settingsStore, historyStore
+├── hooks/                      # useClipboard, useKeyboardShortcut, useDebounce, ... (useHistoryCapture lands in PR-B)
+├── lib/                        # tauri.ts (typed IPC wrappers), icons.ts, utils.ts, sanitizeHistoryDefaults.ts
 └── styles/                     # globals.css, themes.css (CSS variables for both themes)
 ```
 
@@ -145,10 +146,10 @@ cd src-tauri && cargo check
 # Rust: lint (treats warnings as errors)
 cd src-tauri && cargo clippy --all-targets -- -D warnings
 
-# Rust: tests (15 tests covering path validators + preferences validation)
+# Rust: tests (113 tests covering path validators, preferences, history storage + encryption + recovery, secret-pattern redaction)
 cd src-tauri && cargo test
 
-# E2E tests (34 Playwright tests against the Vite dev server)
+# E2E tests (96 Playwright tests against the Vite dev server)
 npm run test:e2e
 
 # Production build (creates .dmg / .msi / .deb)
@@ -223,6 +224,9 @@ These rules apply to EVERY file, EVERY commit, EVERY tool. No exceptions.
 12. **CSP is exactly**: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'`. Never weaken it.
 13. **Tauri capabilities** grant only: clipboard read/write, dialog open/save, fs (scoped to app data dir), os platform/arch. No shell, no http, no notification, no global-shortcut, no process, no updater.
 14. **YAML parsing MUST use `JSON_SCHEMA`** on both `load` and `dump` to prevent prototype pollution via `<<` merge keys.
+15. **History DB encryption key is OS-keychain-only.** Generated via `getrandom` on first launch under service `toolbox-history`. Never written to disk outside the keychain, never logged. Loss of keychain access ≠ DB corruption: the DB is preserved (`history.db` stays put, drawer renders disabled-with-retry); only post-key-rejection or post-corruption states trigger `.bad` rename. SQLCipher pragma key formatted as `x'<hex>'` raw-key form (not passphrase) to avoid KDF ambiguity.
+16. **Sensitive content never reaches the history DB.** Defense-in-depth: each tool's `meta.ts` declares `sensitiveContent: true` for tools that handle secrets (Password Generator, Hash Generator, JWT Decoder, Backslash Escape, Paycheck/Tax — see registry); Rust independently enforces the same list via `SENSITIVE_TOOLS` const in `security/redaction.rs`. Pattern detection (gitleaks-derived `RegexSet`) runs on input, output, AND param values before any write. Sensitive matches produce metadata-only tombstone rows (0 bytes, no content) so the trust signal persists without storing the secret. CI parity check between `meta.ts` flags and Rust list is added in PR-B.
+17. **Adding a tool that handles secrets**: set `sensitiveContent: true` in `meta.ts` AND add the tool id to `SENSITIVE_TOOLS` in `src-tauri/src/security/redaction.rs`. Both are required — frontend bug can't bypass Rust list, Rust drift can't bypass meta.ts flag.
 
 ---
 
@@ -313,7 +317,8 @@ Before any PR is merged or code is considered done, verify:
 ## Current State (v0.2.0)
 
 - **68 tools** shipped (38 free, 30 pro) across 13 categories — Phase 2 of the Finance Calculator Pack is now complete. The full 9-tool finance pack ships: Tip Splitter (Phase 0), Currency Converter (Phase 1 Lane A, IPC-loaded FX snapshot), Expense Splitter (Phase 1 Lane B, pair-payoff settlement), Loan/EMI + Compound Interest (Phase 1 Lane C), Mortgage Calculator (Phase 2 Lane D, P&I + optional escrow), Retirement Calculator (Phase 2 Lane E, deterministic compound + 4% rule heuristic), Tax Bracket Estimator and Paycheck Calculator (Phase 2 Lane F, IPC-loaded `tax-fed` snapshot, persistent compliance disclaimers). All four "estimate-only" finance tools (Mortgage, Retirement, Tax Bracket, Paycheck) render their disclaimer banner in every state — loading, error, empty, and result.
-- **71 Playwright E2E tests** across 24 spec files, **14 Rust unit tests**
+- **Tool History — PR-A scaffolding (storage + IPC + Settings)** — local-first per-tool history backed by SQLCipher-encrypted SQLite at `app_data_dir/history.db`. 32-byte key generated via `getrandom` on first launch and stored in OS keychain (service `toolbox-history`). 9 IPC commands (`add_history_entry`, `list_history`, `get_history_entry`, `delete_history_entry`, `clear_history`, `pin_history_entry`, `set_history_paused`, `set_history_retention`, `history_storage_stats`). Defense-in-depth blocklist: `meta.ts` `sensitiveContent: true` flag + Rust `SENSITIVE_TOOLS` const. Secret-pattern detection on input + output + params via lazy `RegexSet` from a curated `gitleaks` snapshot. Tombstone rows (metadata only, 0 bytes) preserve the trust signal across restarts without storing the secret. Caps: 256 KB input, 1 MB output, 50 MB total (pins count toward total cap), 200 entries/tool, 20 pins/tool. 7-day default TTL (configurable: 1d/7d/30d/forever; sweep runs at startup AND on retention change). Failure modes: keychain unavailability ≠ DB corruption (only post-key-rejection triggers `.bad` rename + fresh start). Settings → History panel (retention radio, pause toggle, storage indicator, clear-all w/ two-step confirm, privacy explainer). **Drawer + per-tool integration land in PR-B.**
+- **108 Playwright E2E tests** across 24 spec files, **113 Rust unit tests**, **132 Vitest tests**
 - **Consumer-friendly home screen** with category cards, synonym search, popular tools grid, and privacy badge
 - **Clipboard auto-detect** with file path + text pattern matching, sensitive content filter, poll-on-focus
 - **8 accent color presets** (default: teal) — user-selectable in Settings
@@ -351,7 +356,13 @@ Before any PR is merged or code is considered done, verify:
 | `src-tauri/tauri.conf.json` | CSP, window config, app identifier, bundler config |
 | `src-tauri/capabilities/default.json` | Tauri permission scoping |
 | `src-tauri/src/security/input_validation.rs` | Path canonicalization + forbidden prefix deny list + tests |
+| `src-tauri/src/security/redaction.rs` | `SENSITIVE_TOOLS` blocklist + gitleaks-derived `RegexSet` for secret-pattern detection (used by history) |
+| `src-tauri/src/storage/history.rs` | SQLCipher-encrypted history DB; mirrors preferences.rs `.bad` recovery; separate keychain failure path |
+| `src-tauri/src/commands/history.rs` | 9 history IPC handlers (add/list/get/delete/clear/pin/pause/retention/stats) |
 | `src-tauri/src/commands/preferences.rs` | Preferences IPC with field validation + size caps |
+| `src/lib/sanitizeHistoryDefaults.ts` | Defensive sanitizer for the new `history` preferences slice |
+| `src/components/history/SettingsPanel.tsx` | Settings → History section (retention, pause, clear-all, privacy explainer) |
+| `tasks/tool-history.md` | Locked plan (5 design + 6 architecture + 11 Codex baked decisions) for the History feature; PR-A landed, PR-B is drawer + tool integration |
 
 ## Skill routing
 

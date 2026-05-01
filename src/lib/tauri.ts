@@ -72,9 +72,12 @@ export const hashText = (text: string, algorithm: HashAlgorithm): Promise<string
 // ─── preferences ─────────────────────────────────────────────────────────────
 
 /**
- * Serialized shape of `UserPreferences` on the Rust side. Keys are snake_case
- * because that's what `serde` emits by default and mirroring the backend shape
- * avoids a translation layer. Zustand store owns the camelCase surface.
+ * Serialized shape of `UserPreferences` on the Rust side. Most keys are
+ * snake_case because that's what `serde` emits by default and mirroring the
+ * backend shape avoids a translation layer. The `history` slice is the lone
+ * exception: its sub-struct uses `#[serde(rename_all = "camelCase")]` so the
+ * frontend can pass the typed `HistoryDefaults` straight through. Zustand
+ * store owns the camelCase surface for the rest of the fields.
  */
 export interface RustUserPreferences {
   theme: 'system' | 'light' | 'dark';
@@ -90,6 +93,13 @@ export interface RustUserPreferences {
   monospace_font_size: number;
   accent_color: string;
   tool_defaults: Record<string, unknown>;
+  /**
+   * Tool-history feature settings. Top-level field on the Rust side. Inner
+   * field names are camelCase via `#[serde(rename_all = "camelCase")]`. May
+   * be absent on older preference files; the frontend sanitizer treats
+   * `undefined` as "use defaults".
+   */
+  history?: unknown;
 }
 
 export const getPreferences = (): Promise<RustUserPreferences> =>
@@ -189,3 +199,119 @@ export const importTaxSnapshot = (json: string): Promise<TaxImportResult> =>
 export const resetFinanceOverlay = (
   name: FinanceDatasetName,
 ): Promise<void> => invoke<void>('reset_finance_overlay', { name });
+
+// ─── history ─────────────────────────────────────────────────────────────────
+//
+// Wrappers for the SQLCipher-backed tool history store. Every command
+// degrades gracefully when history is unavailable this session (keychain
+// locked, init failure): Rust returns a string error and the frontend
+// surfaces it as a disabled-drawer state. Frontend never throws past these
+// wrappers — callers should `try/catch` and decide how to render.
+//
+// String-typed retention values are the wire contract: Rust accepts
+// `"1d" | "7d" | "30d" | "forever"` and returns its own enum form. We
+// keep the wire side here as the source of truth.
+
+export type HistoryRetention = '1d' | '7d' | '30d' | 'forever';
+
+/**
+ * One row in the history. `input`/`output`/`params` are `null` for tombstone
+ * rows AND for `listHistory` results (which the backend truncates to a
+ * preview server-side). Use `getHistoryEntry` to fetch the full payload.
+ */
+export interface HistoryEntry {
+  id: number;
+  tool_id: string;
+  /** ISO 8601 timestamp (`YYYY-MM-DDTHH:MM:SSZ`). */
+  timestamp: string;
+  input: string | null;
+  output: string | null;
+  params: unknown | null;
+  redacted: boolean;
+  reason: string | null;
+  pinned: boolean;
+  bytes: number;
+}
+
+/**
+ * Result of `addHistoryEntry`. `stored: false` means the row was rejected
+ * outright (paused, unknown tool, oversize). `stored: true` with a non-null
+ * `reason` means a tombstone row was inserted (sensitive pattern hit).
+ */
+export interface AddEntryResult {
+  stored: boolean;
+  reason: string | null;
+}
+
+export interface StorageStats {
+  entries: number;
+  bytes_used: number;
+  bytes_cap: number;
+  tombstones: number;
+  pins: number;
+}
+
+export interface PinHistoryResult {
+  ok: boolean;
+  /** `"pin_cap" | "is_tombstone" | "not_found"` when `ok = false`. */
+  reason: string | null;
+}
+
+export interface ClearHistoryResult {
+  removed: number;
+}
+
+export interface AddHistoryEntryArgs {
+  toolId: string;
+  input: string;
+  output: string;
+  params?: unknown;
+}
+
+export const addHistoryEntry = (args: AddHistoryEntryArgs): Promise<AddEntryResult> =>
+  invoke<AddEntryResult>('add_history_entry', {
+    args: {
+      tool_id: args.toolId,
+      input: args.input,
+      output: args.output,
+      params: args.params ?? {},
+    },
+  });
+
+export interface ListHistoryArgs {
+  toolId?: string;
+  limit?: number;
+  beforeTimestamp?: string;
+}
+
+export const listHistory = (args: ListHistoryArgs = {}): Promise<HistoryEntry[]> =>
+  invoke<HistoryEntry[]>('list_history', {
+    args: {
+      tool_id: args.toolId ?? null,
+      limit: args.limit ?? 50,
+      before_timestamp: args.beforeTimestamp ?? null,
+    },
+  });
+
+export const getHistoryEntry = (id: number): Promise<HistoryEntry | null> =>
+  invoke<HistoryEntry | null>('get_history_entry', { args: { id } });
+
+export const deleteHistoryEntry = (id: number): Promise<void> =>
+  invoke<void>('delete_history_entry', { args: { id } });
+
+export const clearHistory = (toolId?: string): Promise<ClearHistoryResult> =>
+  invoke<ClearHistoryResult>('clear_history', {
+    args: { tool_id: toolId ?? null },
+  });
+
+export const pinHistoryEntry = (id: number, pinned: boolean): Promise<PinHistoryResult> =>
+  invoke<PinHistoryResult>('pin_history_entry', { args: { id, pinned } });
+
+export const setHistoryPaused = (paused: boolean): Promise<void> =>
+  invoke<void>('set_history_paused', { args: { paused } });
+
+export const setHistoryRetention = (ttl: HistoryRetention): Promise<void> =>
+  invoke<void>('set_history_retention', { args: { ttl } });
+
+export const historyStorageStats = (): Promise<StorageStats> =>
+  invoke<StorageStats>('history_storage_stats');

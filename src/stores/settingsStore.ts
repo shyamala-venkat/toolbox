@@ -19,6 +19,11 @@ import {
   setPreferences,
   type RustUserPreferences,
 } from '@/lib/tauri';
+import {
+  DEFAULT_HISTORY_DEFAULTS,
+  sanitizeHistoryDefaults,
+  type HistoryDefaults,
+} from '@/lib/sanitizeHistoryDefaults';
 import { useAppStore } from './appStore';
 import { useToolStore } from './toolStore';
 
@@ -38,6 +43,13 @@ export interface UserPreferences {
   monospaceFontSize: number;
   accentColor: string;
   toolDefaults: Record<string, unknown>;
+  /**
+   * Tool-history feature settings. Mirrors the Rust-side top-level
+   * `history` field on `UserPreferences`. Inner field names are camelCase
+   * via `#[serde(rename_all = "camelCase")]` on the Rust struct, so the
+   * shape passes through unchanged.
+   */
+  history: HistoryDefaults;
 }
 
 const DEFAULT_PREFERENCES: UserPreferences = {
@@ -54,26 +66,34 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   monospaceFontSize: 14,
   accentColor: 'teal',
   toolDefaults: {},
+  history: { ...DEFAULT_HISTORY_DEFAULTS, perToolPaused: {} as Record<string, boolean> },
 };
 
-const fromRust = (r: RustUserPreferences): UserPreferences => ({
-  theme: r.theme,
-  sidebarCollapsed: r.sidebar_collapsed,
-  sidebarWidth: r.sidebar_width,
-  smartDetectionEnabled: r.smart_detection_enabled,
-  autoProcessOnPaste: r.auto_process_on_paste,
-  clearInputOnToolSwitch: r.clear_input_on_tool_switch,
-  favoriteToolIds: r.favorite_tool_ids,
-  recentToolIds: r.recent_tool_ids,
-  compactMode: r.compact_mode,
-  minimizeToTray: r.minimize_to_tray,
-  monospaceFontSize: r.monospace_font_size,
-  accentColor: r.accent_color || 'teal',
-  toolDefaults:
-    r.tool_defaults && typeof r.tool_defaults === 'object'
+const fromRust = (r: RustUserPreferences): UserPreferences => {
+  const rawToolDefaults =
+    r.tool_defaults && typeof r.tool_defaults === 'object' && !Array.isArray(r.tool_defaults)
       ? (r.tool_defaults as Record<string, unknown>)
-      : {},
-});
+      : {};
+  return {
+    theme: r.theme,
+    sidebarCollapsed: r.sidebar_collapsed,
+    sidebarWidth: r.sidebar_width,
+    smartDetectionEnabled: r.smart_detection_enabled,
+    autoProcessOnPaste: r.auto_process_on_paste,
+    clearInputOnToolSwitch: r.clear_input_on_tool_switch,
+    favoriteToolIds: r.favorite_tool_ids,
+    recentToolIds: r.recent_tool_ids,
+    compactMode: r.compact_mode,
+    minimizeToTray: r.minimize_to_tray,
+    monospaceFontSize: r.monospace_font_size,
+    accentColor: r.accent_color || 'teal',
+    toolDefaults: rawToolDefaults,
+    // Read the typed top-level `history` field. Older preference files (or
+    // a Rust struct that hasn't migrated yet) may omit it entirely; the
+    // sanitizer returns the default slice for `undefined`.
+    history: sanitizeHistoryDefaults(r.history),
+  };
+};
 
 const toRust = (p: UserPreferences): RustUserPreferences => ({
   theme: p.theme,
@@ -89,6 +109,7 @@ const toRust = (p: UserPreferences): RustUserPreferences => ({
   monospace_font_size: p.monospaceFontSize,
   accent_color: p.accentColor,
   tool_defaults: p.toolDefaults,
+  history: p.history,
 });
 
 interface SettingsStoreState {

@@ -60,7 +60,11 @@ Tool-to-dependency mapping for ToolBox. Updated when tools or dependencies chang
 
 | Crate | Version | Used by | Purpose | Notes |
 |---|---|---|---|---|
-| `keyring` | 3.6.1 | `commands/keychain.rs` | OS keychain (macOS Keychain / Windows Credential Manager) | Service name: `com.toolbox.app`. Provider allowlist: `[openai, anthropic, google]`. |
+| `keyring` | 3.6.1 | `commands/keychain.rs`, `storage/history.rs` | OS keychain (macOS Keychain / Windows Credential Manager) | Service names: `com.toolbox.app` (provider keys), `toolbox-history` (db encryption key). Provider allowlist: `[openai, anthropic, google]`. |
+| `rusqlite` | 0.32.1 | `storage/history.rs` | Encrypted SQLite for tool-execution history | Built with `bundled-sqlcipher` feature: links statically to a SQLCipher-extended SQLite (BSD-3, OK for commercial). 32-byte key generated via `getrandom` on first launch, stored in OS keychain, applied via `PRAGMA key`. Adds ~2-5 min to first cargo build (C compile), <2s incremental. |
+| `regex` | 1.11.1 | `security/redaction.rs` | Secret-pattern detection across history entries | Compiled into a single lazy `RegexSet` (one-pass O(n) scan). Patterns vendored from a curated subset of `gitleaks/config/gitleaks.toml` (MIT). Quarterly review for upstream updates. |
+| `once_cell` | 1.20.2 | `security/redaction.rs` | Lazy-initialized `RegexSet` | Standard pattern; will move to `std::sync::LazyLock` once MSRV permits. |
+| `getrandom` | 0.2.15 | `storage/history.rs` | Cryptographic randomness for the per-install history-DB key | OS-provided CSPRNG. |
 | `sha2` | 0.10.8 | `commands/crypto.rs` | SHA-256, SHA-512 hashing | Streamed in 64 KiB chunks for file mode. |
 | `sha1` | 0.10.6 | `commands/crypto.rs` | SHA-1 hashing | |
 | `md-5` | 0.10.6 | `commands/crypto.rs` | MD5 hashing | |
@@ -79,6 +83,12 @@ Tool-to-dependency mapping for ToolBox. Updated when tools or dependencies chang
 | `serde` | 1.x | Serialization (derive) |
 | `serde_json` | 1.x | JSON serialization |
 | `tokio` | 1.43.0 | Async runtime (rt-multi-thread, fs, io-util, sync, macros) |
+
+### Dev dependencies
+
+| Crate | Version | Purpose |
+|---|---|---|
+| `tempfile` | 3.14.0 | Temp dirs for `storage::history` and `storage::preferences` round-trip tests |
 
 ## Tools with zero third-party dependencies
 

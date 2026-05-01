@@ -25,6 +25,7 @@ const MAX_TOOL_ID_LEN: usize = 64;
 const MAX_TOOL_DEFAULTS_BYTES: usize = 64 * 1024;
 
 const ALLOWED_THEMES: &[&str] = &["system", "light", "dark"];
+const ALLOWED_RETENTIONS: &[&str] = &["1d", "7d", "30d", "forever"];
 
 fn resolve_app_data_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     app.path()
@@ -95,6 +96,16 @@ fn validate(prefs: &UserPreferences) -> Result<(), String> {
             "tool_defaults exceeds max size ({MAX_TOOL_DEFAULTS_BYTES} bytes)"
         ));
     }
+    if !ALLOWED_RETENTIONS.contains(&prefs.history.retention.as_str()) {
+        return Err(format!(
+            "invalid history.retention '{}'; allowed: {}",
+            prefs.history.retention,
+            ALLOWED_RETENTIONS.join(", ")
+        ));
+    }
+    for id in prefs.history.per_tool_paused.keys() {
+        validate_tool_id(id)?;
+    }
     Ok(())
 }
 
@@ -140,21 +151,7 @@ mod tests {
     use super::*;
 
     fn baseline() -> UserPreferences {
-        UserPreferences {
-            theme: "system".to_string(),
-            sidebar_collapsed: false,
-            sidebar_width: 240,
-            smart_detection_enabled: true,
-            auto_process_on_paste: false,
-            clear_input_on_tool_switch: false,
-            favorite_tool_ids: Vec::new(),
-            recent_tool_ids: Vec::new(),
-            compact_mode: false,
-            minimize_to_tray: true,
-            monospace_font_size: 14,
-            accent_color: "teal".to_string(),
-            tool_defaults: serde_json::Value::Object(serde_json::Map::new()),
-        }
+        UserPreferences::default()
     }
 
     #[test]
@@ -177,6 +174,39 @@ mod tests {
             result.unwrap_err().contains("exceeds max size"),
             "error should mention size cap",
         );
+    }
+
+    #[test]
+    fn validate_accepts_all_retention_values() {
+        for r in ["1d", "7d", "30d", "forever"] {
+            let mut prefs = baseline();
+            prefs.history.retention = r.to_string();
+            assert!(
+                validate(&prefs).is_ok(),
+                "expected retention '{r}' to be accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn validate_rejects_unknown_retention() {
+        let mut prefs = baseline();
+        prefs.history.retention = "5d".to_string();
+        let err = validate(&prefs).expect_err("invalid retention should error");
+        assert!(
+            err.contains("history.retention"),
+            "error should mention the offending field, got: {err}"
+        );
+    }
+
+    #[test]
+    fn validate_rejects_invalid_per_tool_paused_id() {
+        let mut prefs = baseline();
+        prefs
+            .history
+            .per_tool_paused
+            .insert("../etc/passwd".to_string(), true);
+        assert!(validate(&prefs).is_err());
     }
 
     #[test]

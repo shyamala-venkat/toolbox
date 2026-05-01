@@ -44,6 +44,19 @@ oxipng = "9.1.3"
 kamadak-exif = "0.5.5"
 mozjpeg = "0.10.10"
 
+# Tool history (encrypted local SQLite)
+# - rusqlite + bundled-sqlcipher: links a statically-compiled SQLCipher 4 SQLite.
+#   BSD-3 license; first build cost is the C compile (2-5 min), incremental is fast.
+# - regex + once_cell: secret-pattern RegexSet for tombstone detection.
+# - getrandom: 32-byte DB encryption key generation on first launch.
+rusqlite = { version = "0.32.1", features = ["bundled-sqlcipher"] }
+regex = "1.11.1"
+once_cell = "1.20.2"
+getrandom = "0.2.15"
+
+[dev-dependencies]
+tempfile = "3.14.0"
+
 [features]
 # this feature is used for production builds or when `devUrl` points to a remote server
 custom-protocol = ["tauri/custom-protocol"]
