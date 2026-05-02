@@ -1,30 +1,31 @@
 /**
  * ToolPage — wrapper for every tool route.
  *
- * Layout (PR-B.1):
+ * Layout (post-PR-B revision):
  *
- *   ┌─────────────────────────────────────────────────────────────────────────┐
- *   │                          page-flex (row, full height)                    │
- *   │ ┌───────────────────────────────────────────────────┐ ┌───────────────┐ │
- *   │ │                                                   │ │               │ │
- *   │ │              Tool content column                  │ │   <Drawer>    │ │
- *   │ │  (centered max-w-[960px] unless fullWidth)        │ │  rail | open  │ │
- *   │ │                                                   │ │  | + detail   │ │
- *   │ │  - <ToolHeader>                                   │ │               │ │
- *   │ │  - children (the tool's content)                  │ │               │ │
- *   │ │                                                   │ │               │ │
- *   │ └───────────────────────────────────────────────────┘ └───────────────┘ │
- *   └─────────────────────────────────────────────────────────────────────────┘
+ *   ┌──────────────────────────────────────────────────────┐
+ *   │                                                       │
+ *   │   <ToolHeader>                                        │
+ *   │                                                       │
+ *   │   ┌────────┐┌──────────┐                              │
+ *   │   │ Editor ││ Recent N │   ← <EditorHistoryTabs>      │
+ *   │   └────────┴──────────┴───────────────────────────    │
+ *   │                                                       │
+ *   │   <children> when Editor tab is active                │
+ *   │   <RecentList> when Recent tab is active              │
+ *   │                                                       │
+ *   └──────────────────────────────────────────────────────┘
  *
- * The drawer is a flex sibling of the tool content — NOT inside the
- * centered max-width wrapper — so it always pins to the right edge of the
- * viewport regardless of the content column's max-width. The drawer
- * decides its own width and may render nothing on narrow viewports
- * (< 1024 px) or for tools that aren't history-eligible.
+ * Centered max-w-[960px] unless `fullWidth`. The earlier right-side
+ * drawer pattern was removed — the inline tab pattern tested better with
+ * users (less visual clutter, history is fully on-demand, no slim rail
+ * masquerading as a scrollbar).
  *
- * Eligibility: a tool gets a drawer only when BOTH conditions hold:
+ * Eligibility: a tool gets the Recent tab only when BOTH conditions hold:
  *   - `tool.sensitiveContent !== true`  (defense-in-depth privacy)
  *   - `tool.historyEligible !== false`  (text-in/text-out shape)
+ *
+ * Ineligible tools render their content without the tab chrome.
  */
 
 import { Component, useEffect, type ErrorInfo, type ReactNode } from 'react';
@@ -33,7 +34,7 @@ import { ToolHeader } from './ToolHeader';
 import { ToolError } from './ToolError';
 import { useToolHistory } from '@/hooks/useToolHistory';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
-import { Drawer } from '@/components/history/Drawer';
+import { EditorHistoryTabs } from '@/components/history/EditorHistoryTabs';
 import { HistoryRestoreProvider } from '@/contexts/HistoryRestoreContext';
 import { cn } from '@/lib/utils';
 
@@ -76,8 +77,8 @@ export function ToolPage({
 
   const eligible = isHistoryEligible(tool);
 
-  const content = (
-    <div className="flex w-full flex-1 min-w-0">
+  return (
+    <HistoryRestoreProvider toolId={tool.id}>
       <div
         className={cn(
           'mx-auto w-full px-6 py-8',
@@ -85,22 +86,13 @@ export function ToolPage({
         )}
       >
         <ToolHeader tool={tool} />
-        <ToolErrorBoundary>{children}</ToolErrorBoundary>
-      </div>
-    </div>
-  );
-
-  if (!eligible) {
-    // Still wrap with a no-op restore provider so tools can call
-    // useHistoryRestore() unconditionally without crashing.
-    return <HistoryRestoreProvider toolId={tool.id}>{content}</HistoryRestoreProvider>;
-  }
-
-  return (
-    <HistoryRestoreProvider toolId={tool.id}>
-      <div className="flex h-full w-full">
-        {content}
-        <Drawer tool={tool} currentInput={currentInput} />
+        {eligible ? (
+          <EditorHistoryTabs tool={tool} currentInput={currentInput}>
+            <ToolErrorBoundary>{children}</ToolErrorBoundary>
+          </EditorHistoryTabs>
+        ) : (
+          <ToolErrorBoundary>{children}</ToolErrorBoundary>
+        )}
       </div>
     </HistoryRestoreProvider>
   );

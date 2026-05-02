@@ -1,140 +1,124 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Per-tool "Recent runs" drawer flows (PR-B).
+ * Inline tab-pattern history flows.
+ *
+ * (The right-side drawer was replaced with an inline `Editor / Recent (N)`
+ * tab pattern after user feedback. Tests cover the new pattern.)
  *
  * Note on the test environment: Playwright runs against the Vite dev server
- * (no Tauri runtime), so the history IPC commands always fail. The drawer
- * is designed to handle that gracefully — it renders, then surfaces an
- * "unavailable" banner once it tries to fetch and the IPC errors. We test
- * what's reliably observable in that environment:
+ * (no Tauri runtime), so the history IPC commands always fail. The Recent
+ * tab is designed to handle that gracefully — when the user opens it, the
+ * fetch errors and the unavailable banner renders. We test what's reliably
+ * observable in that environment:
  *
- *   - Drawer mounts on eligible tools (json-formatter)
- *   - Drawer is ABSENT on sensitive tools (password-gen)
- *   - Drawer is ABSENT on file-input tools (pdf-merge, historyEligible:false)
- *   - Rail-to-expanded toggle works (click + Cmd+Shift+H shortcut)
- *   - Esc collapses the expanded drawer
- *   - The unavailable banner appears once an IPC fetch errors out
+ *   - Tabs render on eligible tools
+ *   - Tabs are ABSENT on sensitive tools
+ *   - Tabs are ABSENT on non-eligible tools (file-input, form, visual)
+ *   - Editor tab is the default and shows the tool's content
+ *   - Clicking the Recent tab shows the history list (or unavailable banner)
+ *   - Tool functionality is unaffected when the tabs are present
  */
-test.describe('History drawer', () => {
-  test('drawer rail renders on an eligible tool (json-formatter)', async ({ page }) => {
+test.describe('Editor / Recent tabs', () => {
+  test('tabs render on an eligible tool (json-formatter)', async ({ page }) => {
     await page.goto('/tools/json-formatter');
     await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
 
-    const drawer = page.locator('aside[aria-label="Recent runs for JSON Formatter"]');
-    await expect(drawer).toBeVisible();
+    const tablist = page.locator('[role="tablist"][aria-label="Editor or recent runs"]');
+    await expect(tablist).toBeVisible();
 
-    // Default state is collapsed → the rail button is the only thing inside.
-    const railButton = drawer.locator('button[aria-label*="Expand recent runs"]');
-    await expect(railButton).toBeVisible();
+    const editorTab = tablist.locator('[role="tab"]', { hasText: 'Editor' });
+    const recentTab = tablist.locator('[role="tab"]', { hasText: 'Recent' });
+    await expect(editorTab).toBeVisible();
+    await expect(recentTab).toBeVisible();
   });
 
-  test('drawer is NOT rendered on a sensitive tool (password-gen)', async ({ page }) => {
+  test('tabs are NOT rendered on a sensitive tool (password-gen)', async ({ page }) => {
     await page.goto('/tools/password-gen');
     await expect(page.locator('h1', { hasText: 'Password Generator' })).toBeVisible();
 
-    // No drawer at all — sensitiveContent: true → ToolPage skips the Drawer.
-    const drawer = page.locator('aside[aria-label*="Recent runs"]');
-    await expect(drawer).toHaveCount(0);
+    const tablist = page.locator('[role="tablist"][aria-label="Editor or recent runs"]');
+    await expect(tablist).toHaveCount(0);
   });
 
-  test('drawer is NOT rendered on a file-input tool (pdf-merge, historyEligible:false)', async ({
+  test('tabs are NOT rendered on a file-input tool (pdf-merge, historyEligible:false)', async ({
     page,
   }) => {
     await page.goto('/tools/pdf-merge');
     await expect(page.locator('h1', { hasText: 'PDF Merge' })).toBeVisible();
 
-    const drawer = page.locator('aside[aria-label*="Recent runs"]');
-    await expect(drawer).toHaveCount(0);
+    const tablist = page.locator('[role="tablist"][aria-label="Editor or recent runs"]');
+    await expect(tablist).toHaveCount(0);
   });
 
-  test('clicking the rail expands the drawer and shows the Recent runs header', async ({
+  test('Editor tab is selected by default and shows the tool content', async ({ page }) => {
+    await page.goto('/tools/json-formatter');
+    await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
+
+    const editorTab = page.locator('[role="tab"]', { hasText: 'Editor' });
+    await expect(editorTab).toHaveAttribute('aria-selected', 'true');
+
+    // Tool's input is visible when the Editor tab is active.
+    const input = page.locator('textarea[aria-label="JSON input"]');
+    await expect(input).toBeVisible();
+  });
+
+  test('clicking Recent tab switches focus and renders the list (or unavailable banner)', async ({
     page,
   }) => {
     await page.goto('/tools/json-formatter');
     await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
 
-    const drawer = page.locator('aside[aria-label="Recent runs for JSON Formatter"]');
-    await expect(drawer).toBeVisible();
+    const recentTab = page.locator('[role="tab"]', { hasText: 'Recent' });
+    await recentTab.click();
 
-    const railButton = drawer.locator('button[aria-label*="Expand recent runs"]');
-    await railButton.click();
+    await expect(recentTab).toHaveAttribute('aria-selected', 'true');
 
-    // Expanded header includes the "Recent runs" label text.
-    await expect(drawer.locator('text=Recent runs')).toBeVisible({ timeout: 3000 });
-
-    // The collapse-drawer button is present in the expanded header.
-    const collapseButton = drawer.locator('button[aria-label="Collapse drawer"]');
-    await expect(collapseButton).toBeVisible();
+    // Either the unavailable banner appears (Vite-dev: no Tauri IPC) or the
+    // empty state renders. Either is acceptable; both indicate the panel
+    // mounted correctly.
+    const unavailable = page.locator('text=History temporarily unavailable');
+    const empty = page.locator('text=Recent runs of');
+    await expect.poll(async () => {
+      return (await unavailable.count()) + (await empty.count());
+    }, { timeout: 3000 }).toBeGreaterThan(0);
   });
 
-  test('Cmd/Ctrl+Shift+H toggles the drawer between rail and expanded', async ({ page }) => {
+  test('Recent tab unavailable state has a Retry button (IPC-down branch)', async ({ page }) => {
     await page.goto('/tools/json-formatter');
     await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
 
-    const drawer = page.locator('aside[aria-label="Recent runs for JSON Formatter"]');
-    await expect(drawer).toBeVisible();
+    await page.locator('[role="tab"]', { hasText: 'Recent' }).click();
 
-    // Move focus off the input so the shortcut isn't blocked by the editable
-    // target guard inside useKeyboardShortcut.
-    await page.locator('h1').click();
-
-    // Press Ctrl+Shift+H — useKeyboardShortcut treats `mod` as either Meta
-    // (mac) or Control (everywhere else); Playwright on chromium fires the
-    // `Control` modifier, which the hook accepts.
-    await page.keyboard.press('Control+Shift+H');
-
-    // Expanded header text appears.
-    await expect(drawer.locator('text=Recent runs')).toBeVisible({ timeout: 3000 });
-
-    // Press again to collapse — the rail button reappears.
-    await page.keyboard.press('Control+Shift+H');
-    await expect(drawer.locator('button[aria-label*="Expand recent runs"]')).toBeVisible({
-      timeout: 3000,
-    });
-  });
-
-  test('Esc collapses the expanded drawer', async ({ page }) => {
-    await page.goto('/tools/json-formatter');
-    await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
-
-    const drawer = page.locator('aside[aria-label="Recent runs for JSON Formatter"]');
-    const railButton = drawer.locator('button[aria-label*="Expand recent runs"]');
-    await railButton.click();
-    await expect(drawer.locator('text=Recent runs')).toBeVisible({ timeout: 3000 });
-
-    // Move focus off any input/textarea (Esc should still work because the
-    // Drawer's Esc handler is window-level, not target-gated).
-    await page.locator('h1').click();
-    await page.keyboard.press('Escape');
-
-    await expect(drawer.locator('button[aria-label*="Expand recent runs"]')).toBeVisible({
-      timeout: 3000,
-    });
-  });
-
-  test('expanded drawer renders the unavailable banner when IPC is missing', async ({ page }) => {
     // In the dev-server environment the Tauri IPC isn't wired, so listHistory
-    // throws and the drawer falls into its "history unavailable" branch.
+    // rejects and the panel renders "History temporarily unavailable" + Retry.
     // This test pins that contract — if a future change swallows the error
     // and shows a perpetual skeleton, the regression is loud.
+    await expect(page.locator('text=History temporarily unavailable')).toBeVisible({
+      timeout: 3000,
+    });
+    await expect(page.locator('button', { hasText: 'Retry' })).toBeVisible();
+  });
+
+  test('switching back to Editor tab restores the tool input', async ({ page }) => {
     await page.goto('/tools/json-formatter');
     await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
 
-    const drawer = page.locator('aside[aria-label="Recent runs for JSON Formatter"]');
-    await drawer.locator('button[aria-label*="Expand recent runs"]').click();
+    const input = page.locator('textarea[aria-label="JSON input"]');
+    await input.fill('{"x":1}');
 
-    // The banner copy is "History temporarily unavailable" with a Retry button.
-    await expect(drawer.locator('text=History temporarily unavailable')).toBeVisible({
-      timeout: 3000,
-    });
-    await expect(drawer.locator('button', { hasText: 'Retry' })).toBeVisible();
+    // Switch to Recent and back to Editor — the input must persist (the
+    // Editor tabpanel is hidden, not unmounted).
+    await page.locator('[role="tab"]', { hasText: 'Recent' }).click();
+    await page.locator('[role="tab"]', { hasText: 'Editor' }).click();
+
+    await expect(input).toHaveValue('{"x":1}');
   });
 
-  test('drawer mount does not break the JSON Formatter happy path', async ({ page }) => {
-    // Regression guard: the drawer is rendered alongside the tool content.
-    // If layout, focus, or event-bubbling regressions sneak in, the simplest
-    // detection is "does the tool still produce output for valid input?"
+  test('tab mount does not break the JSON Formatter happy path', async ({ page }) => {
+    // Regression guard: the tabs wrap the tool content. If layout, focus,
+    // or event-bubbling regressions sneak in, the simplest detection is
+    // "does the tool still produce output for valid input?"
     await page.goto('/tools/json-formatter');
     await expect(page.locator('h1', { hasText: 'JSON Formatter' })).toBeVisible();
 
