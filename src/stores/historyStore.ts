@@ -245,17 +245,49 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
       fetchingByTool: { ...state.fetchingByTool, [toolId]: true },
     }));
     try {
-      const rows = await ipcListHistory({ toolId, limit: 50 });
+      // 10-second timeout. The history IPC is small and fast (single
+      // SELECT with LIMIT 50). If it doesn't respond in 10s the most
+      // likely cause is the Rust side mid-rebuild during `tauri dev` or
+      // a deadlock — either way, the user shouldn't see a perpetual
+      // skeleton. Surface a concrete error and let them Retry.
+      const TIMEOUT_MS = 10_000;
+      const rows = await Promise.race([
+        ipcListHistory({ toolId, limit: 50 }),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`list_history timed out after ${TIMEOUT_MS}ms`)),
+            TIMEOUT_MS,
+          ),
+        ),
+      ]);
       set((state) => ({
         entriesByTool: { ...state.entriesByTool, [toolId]: rows },
         fetchingByTool: { ...state.fetchingByTool, [toolId]: false },
         errorByTool: { ...state.errorByTool, [toolId]: null },
       }));
     } catch (err) {
-      // Record the error so the drawer can render the "history unavailable"
+      // Record the error so the panel can render the "history unavailable"
       // branch with a retry action, and ALWAYS clear the in-flight flag so
-      // the drawer doesn't sit on a perpetual skeleton.
-      const message = typeof err === 'string' ? err : 'history unavailable';
+      // the panel doesn't sit on a perpetual skeleton.
+      //
+      // Tauri's `invoke` rejects with whatever shape the Rust handler
+      // returned (string for `Result<_, String>`, or an Error object for
+      // protocol-level failures). Coerce all of them into a readable string
+      // so the user sees something actionable in the unavailable banner.
+      const message =
+        typeof err === 'string'
+          ? err
+          : err instanceof Error
+            ? err.message || err.toString()
+            : err == null
+              ? 'history unavailable'
+              : (() => {
+                  try {
+                    return JSON.stringify(err);
+                  } catch {
+                    return String(err);
+                  }
+                })();
       set((state) => ({
         fetchingByTool: { ...state.fetchingByTool, [toolId]: false },
         errorByTool: { ...state.errorByTool, [toolId]: message },

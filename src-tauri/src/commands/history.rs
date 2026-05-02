@@ -15,18 +15,39 @@ use crate::storage::preferences;
 use serde::{Deserialize, Serialize};
 use tauri::{Manager, State};
 
-/// Tauri-managed state wrapper around the optional history store.
+/// Tauri-managed state for the history store.
 ///
-/// `None` means "history is unavailable this session" (keychain locked,
-/// catastrophic init failure). All commands degrade gracefully in that case
-/// rather than panicking — frontend treats it as the disabled-drawer state.
-pub struct HistoryState(pub Option<HistoryStore>);
+/// Three states:
+///   - `Active(store)` — happy path, all commands work.
+///   - `Failed(reason)` — init failed at app startup; commands return the
+///     reason string so the frontend can show it directly. The most common
+///     cause is keychain access denial on first launch (macOS prompt).
+///   - The legacy `Option`-shaped variant kept around for tests that
+///     pre-date this enum is collapsed into `Active(Some)` / `Failed(...)`.
+pub enum HistoryState {
+    Active(HistoryStore),
+    Failed(String),
+}
+
+impl HistoryState {
+    /// Convenience constructor for "init succeeded, here is the store".
+    pub fn active(store: HistoryStore) -> Self {
+        Self::Active(store)
+    }
+
+    /// Convenience constructor for "init failed for this reason."
+    pub fn failed(reason: impl Into<String>) -> Self {
+        Self::Failed(reason.into())
+    }
+}
 
 fn store(state: &HistoryState) -> Result<&HistoryStore, String> {
-    state
-        .0
-        .as_ref()
-        .ok_or_else(|| "history is unavailable this session".to_string())
+    match state {
+        HistoryState::Active(s) => Ok(s),
+        HistoryState::Failed(reason) => Err(format!(
+            "history is unavailable this session: {reason}"
+        )),
+    }
 }
 
 fn map_err(e: HistoryError) -> String {

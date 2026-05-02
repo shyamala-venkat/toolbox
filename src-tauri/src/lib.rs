@@ -162,16 +162,21 @@ pub fn run() {
                         initial_paused,
                         initial_retention,
                     ) {
-                        Ok(store) => HistoryState(Some(store)),
+                        Ok(store) => HistoryState::active(store),
                         Err(e) => {
-                            eprintln!("[toolbox] history store unavailable: {e}");
-                            HistoryState(None)
+                            // Both stderr-log AND surface to the frontend.
+                            // The most common cause is the user denying the
+                            // macOS keychain access prompt on first launch.
+                            let reason = e.to_string();
+                            eprintln!("[toolbox] history store unavailable: {reason}");
+                            HistoryState::failed(reason)
                         }
                     }
                 }
                 Err(e) => {
-                    eprintln!("[toolbox] history store unavailable (no app data dir): {e}");
-                    HistoryState(None)
+                    let reason = format!("no app data dir: {e}");
+                    eprintln!("[toolbox] history store unavailable: {reason}");
+                    HistoryState::failed(reason)
                 }
             };
             app.manage(history_state);
@@ -185,7 +190,7 @@ pub fn run() {
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn_blocking(move || {
                 let state = app_handle.state::<HistoryState>();
-                if let HistoryState(Some(ref store_ref)) = *state {
+                if let HistoryState::Active(ref store_ref) = *state {
                     if let Err(e) = store_ref.ttl_sweep() {
                         eprintln!("[toolbox] history TTL sweep failed at startup: {e}");
                     }

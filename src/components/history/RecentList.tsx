@@ -80,40 +80,54 @@ export function RecentList({ tool, currentInput, onRestore }: RecentListProps) {
   if (fetchError) {
     return (
       <div
-        className="rounded-md p-6 text-center"
+        className="rounded-md p-6"
         style={{ backgroundColor: 'var(--surface-1)', border: '1px solid var(--border-primary)' }}
       >
-        <AlertTriangle
-          className="mx-auto h-6 w-6"
-          style={{ color: 'var(--warning, #f59e0b)' }}
-          aria-hidden="true"
-        />
-        <p
-          className="mt-3 text-sm font-medium"
-          style={{ color: 'var(--text-primary)' }}
-        >
-          History temporarily unavailable
-        </p>
-        <p
-          className="mt-1 text-xs"
-          style={{ color: 'var(--text-tertiary)' }}
-          title={fetchError}
-        >
-          The history database couldn’t be read this session. Try again or
-          check your OS keychain access.
-        </p>
-        <button
-          type="button"
-          onClick={() => void retryFetch(tool.id)}
-          className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors hover:bg-[var(--surface-hover)] focus:outline-none focus-visible:ring-2"
-          style={{
-            color: 'var(--text-primary)',
-            border: '1px solid var(--border-primary)',
-            backgroundColor: 'var(--surface-1)',
-          }}
-        >
-          Retry
-        </button>
+        <div className="flex flex-col items-center text-center">
+          <AlertTriangle
+            className="h-6 w-6"
+            style={{ color: 'var(--warning, #f59e0b)' }}
+            aria-hidden="true"
+          />
+          <p
+            className="mt-3 text-sm font-medium"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            History temporarily unavailable
+          </p>
+          <p
+            className="mt-1 max-w-md text-xs"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            The history database couldn’t be read this session. The most
+            common cause is denying the macOS keychain access prompt. The
+            error reported by the backend is below — open Settings → History
+            for guidance, or click Retry to try again.
+          </p>
+          <pre
+            className="mt-3 max-w-full overflow-auto rounded px-3 py-2 text-left text-[11px]"
+            style={{
+              color: 'var(--text-secondary)',
+              backgroundColor: 'var(--surface-2, var(--surface-hover))',
+              border: '1px solid var(--border-hairline)',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            }}
+          >
+            {fetchError}
+          </pre>
+          <button
+            type="button"
+            onClick={() => void retryFetch(tool.id)}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors hover:bg-[var(--surface-hover)] focus:outline-none focus-visible:ring-2"
+            style={{
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-primary)',
+              backgroundColor: 'var(--surface-1)',
+            }}
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
