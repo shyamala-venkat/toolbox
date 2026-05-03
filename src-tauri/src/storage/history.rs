@@ -380,8 +380,50 @@ impl HistoryStore {
             Ok(c) => c,
             Err(first_err) => {
                 // The keychain succeeded, so the only remaining failure
-                // class is a DB-side problem (wrong key, corrupt header).
-                // Rename and try once with a fresh file.
+                // class is a DB-side problem. Three sub-cases:
+                //
+                // 1. Stale WAL/SHM lock files from a crashed prior session.
+                //    SQLCipher reports this as "disk I/O error". The DB
+                //    itself is fine — we just need to clear the auxiliary
+                //    files and retry. We do this BEFORE the rename-to-bad
+                //    fallback because losing user data on a transient
+                //    crash-recovery is worse than restarting twice.
+                // 2. Wrong key (keychain entry was rotated, app re-signed).
+                // 3. Header corrupt (truncation, partial write).
+                //
+                // (2) and (3) require renaming the file to `.bad` and
+                // creating a fresh DB.
+                let err_str = first_err.to_string().to_lowercase();
+                let looks_like_lock = err_str.contains("disk i/o")
+                    || err_str.contains("database is locked");
+                if looks_like_lock {
+                    let wal = with_suffix(&path, "-wal");
+                    let shm = with_suffix(&path, "-shm");
+                    let removed_wal = std::fs::remove_file(&wal).is_ok();
+                    let removed_shm = std::fs::remove_file(&shm).is_ok();
+                    if removed_wal || removed_shm {
+                        eprintln!(
+                            "[toolbox] history.db open hit '{first_err}'; cleared stale WAL/SHM lock files and retrying"
+                        );
+                        if let Ok(c) = open_encrypted(&path, &key) {
+                            // Self-heal succeeded.
+                            let store = Self {
+                                conn: Mutex::new(c),
+                                paused: Mutex::new(initial_paused),
+                                retention: Mutex::new(initial_retention),
+                                known_tool_ids,
+                            };
+                            // Bootstrap on the recovered connection.
+                            let conn_lock = store.lock_conn()?;
+                            bootstrap_schema(&conn_lock)?;
+                            run_migrations(&conn_lock)?;
+                            drop(conn_lock);
+                            return Ok(store);
+                        }
+                    }
+                }
+
+                // Fall through to rename-to-bad recovery.
                 if path.exists() {
                     let bad = bad_path(&path);
                     if let Err(rename_err) = std::fs::rename(&path, &bad) {
@@ -390,6 +432,9 @@ impl HistoryStore {
                         );
                         return Err(first_err);
                     }
+                    // Best-effort: drop any leftover WAL/SHM that survived.
+                    let _ = std::fs::remove_file(with_suffix(&path, "-wal"));
+                    let _ = std::fs::remove_file(with_suffix(&path, "-shm"));
                     eprintln!(
                         "[toolbox] history.db rejected the key or was corrupt; renamed to {} and re-creating",
                         bad.display()
@@ -1016,6 +1061,14 @@ fn bad_path(db_path: &Path) -> PathBuf {
     let ts = epoch_secs_now();
     let mut s = db_path.as_os_str().to_owned();
     s.push(format!(".bad.{ts}"));
+    PathBuf::from(s)
+}
+
+/// Append a literal suffix to a path. Used for the SQLite WAL (`-wal`)
+/// and SHM (`-shm`) auxiliary files that live alongside the main DB.
+fn with_suffix(db_path: &Path, suffix: &str) -> PathBuf {
+    let mut s = db_path.as_os_str().to_owned();
+    s.push(suffix);
     PathBuf::from(s)
 }
 
