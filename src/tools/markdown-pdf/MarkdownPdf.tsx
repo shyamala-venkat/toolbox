@@ -1,13 +1,16 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
+import { jsPDF } from 'jspdf';
+import { save } from '@tauri-apps/plugin-dialog';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAppStore } from '@/stores/appStore';
+import { writeBinaryFile } from '@/lib/tauri';
 import { meta } from './meta';
 
 // ─── Markdown config ────────────────────────────────────────────────────────
@@ -174,8 +177,6 @@ function MarkdownPdf() {
   const showToast = useAppStore((s) => s.showToast);
   const [input, setInput] = useState('');
   const [exporting, setExporting] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
   const debouncedInput = useDebounce(input, 200);
 
   const sanitizedHtml = useMemo(() => {
@@ -188,8 +189,30 @@ function MarkdownPdf() {
   const isEmpty = input.trim().length === 0;
 
   // ─── Export handler ───────────────────────────────────────────────────
+  //
+  // The previous implementation used `iframe.contentWindow.print()` and
+  // relied on the OS print dialog's "Save as PDF" button. That flow is
+  // unreliable inside a Tauri webview (window.print() may not surface a
+  // dialog at all on macOS) and gives the user no control over the file
+  // name or location.
+  //
+  // New flow:
+  //   1. Render the sanitized HTML offscreen in a real DOM node so jsPDF
+  //      can rasterize it via html2canvas. (The hidden div is removed
+  //      whether the export succeeds or fails.)
+  //   2. Generate a PDF blob with jsPDF's `.html()` method (A4, 16 mm
+  //      margins, automatic page breaks).
+  //   3. Show a Save dialog so the user picks the destination.
+  //   4. Write the bytes to that path via the new `write_binary_file`
+  //      Rust IPC (path-validated, 100 MB cap, refuses symlinks).
+  //
+  // Output is image-based (canvas-rasterized), so the PDF is not text-
+  // searchable. The trade-off is reliable rendering of every markdown
+  // construct (lists, code blocks, tables, blockquotes) without writing
+  // a custom token walker. We can swap in a token-walked, text-based
+  // renderer in a later pass if searchability becomes a real ask.
 
-  const handleExportPdf = useCallback(() => {
+  const handleExportPdf = useCallback(async () => {
     if (sanitizedHtml.length === 0) {
       showToast('Nothing to export. Enter some Markdown first.', 'warning');
       return;
@@ -197,76 +220,61 @@ function MarkdownPdf() {
 
     setExporting(true);
 
-    try {
-      // Create a hidden iframe for printing
-      const iframe = document.createElement('iframe');
-      iframe.style.position = 'fixed';
-      iframe.style.left = '-9999px';
-      iframe.style.top = '-9999px';
-      iframe.style.width = '210mm';
-      iframe.style.height = '297mm';
-      document.body.appendChild(iframe);
-      iframeRef.current = iframe;
+    // Build the offscreen render target. Width matches the inside-margin
+    // width of an A4 page at 96 DPI: (210 mm − 2×16 mm) × 3.78 px/mm.
+    const RENDER_WIDTH_PX = 670;
+    const host = document.createElement('div');
+    host.setAttribute('aria-hidden', 'true');
+    host.style.position = 'fixed';
+    host.style.left = '-99999px';
+    host.style.top = '0';
+    host.style.width = `${RENDER_WIDTH_PX}px`;
+    host.style.padding = '0';
+    host.style.background = '#ffffff';
+    host.innerHTML = `<style>${PRINT_CSS}</style><div class="md-export-body">${sanitizedHtml}</div>`;
+    document.body.appendChild(host);
 
-      const iframeDoc = iframe.contentDocument ?? iframe.contentWindow?.document;
-      if (!iframeDoc) {
-        showToast('Could not create print frame.', 'error');
-        document.body.removeChild(iframe);
-        setExporting(false);
+    try {
+      const target = await save({
+        title: 'Save PDF',
+        defaultPath: 'markdown-export.pdf',
+        filters: [{ name: 'PDF', extensions: ['pdf'] }],
+      });
+      if (!target) {
+        // User cancelled the dialog. Quietly exit — no toast needed.
         return;
       }
 
-      iframeDoc.open();
-      iframeDoc.write(`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>Markdown Export</title>
-<style>${PRINT_CSS}</style>
-</head>
-<body>${sanitizedHtml}</body>
-</html>`);
-      iframeDoc.close();
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        compress: true,
+      });
 
-      // Wait for the iframe content to load before printing
-      iframe.onload = () => {
-        try {
-          iframe.contentWindow?.print();
-        } catch {
-          showToast('Print dialog could not be opened.', 'error');
-        } finally {
-          // Clean up after a brief delay to allow the print dialog to open
-          setTimeout(() => {
-            if (iframeRef.current && document.body.contains(iframeRef.current)) {
-              document.body.removeChild(iframeRef.current);
-              iframeRef.current = null;
-            }
-            setExporting(false);
-          }, 500);
-        }
-      };
+      // jsPDF.html returns a thenable; awaiting it resolves once
+      // rendering and pagination are complete.
+      await doc.html(host, {
+        x: 16,
+        y: 16,
+        width: 178, // 210 mm - 2*16 mm
+        windowWidth: RENDER_WIDTH_PX,
+        margin: [16, 16, 16, 16],
+        autoPaging: 'text',
+      });
 
-      // Fallback: if onload doesn't fire (content already loaded synchronously)
-      // trigger print directly after a brief delay
-      setTimeout(() => {
-        if (iframeRef.current && document.body.contains(iframeRef.current)) {
-          try {
-            iframeRef.current.contentWindow?.print();
-          } catch {
-            // Already handled above
-          }
-          setTimeout(() => {
-            if (iframeRef.current && document.body.contains(iframeRef.current)) {
-              document.body.removeChild(iframeRef.current);
-              iframeRef.current = null;
-            }
-            setExporting(false);
-          }, 500);
-        }
-      }, 300);
+      // `output('arraybuffer')` returns the binary PDF; convert to a
+      // typed array so the Tauri IPC can serialize it.
+      const ab = doc.output('arraybuffer') as ArrayBuffer;
+      const bytes = new Uint8Array(ab);
+      await writeBinaryFile(target, bytes);
+
+      showToast('Saved PDF', 'success');
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       showToast(`Export failed: ${msg}`, 'error');
+    } finally {
+      if (host.parentNode) host.parentNode.removeChild(host);
       setExporting(false);
     }
   }, [sanitizedHtml, showToast]);

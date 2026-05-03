@@ -12,7 +12,7 @@ pub mod storage;
 
 use commands::{
     crypto::{hash_file, hash_text},
-    file_ops::{read_text_file, stat_file, write_text_file},
+    file_ops::{read_text_file, stat_file, write_binary_file, write_text_file},
     finance::{
         get_finance_dataset, import_fx_snapshot, import_tax_snapshot, reset_finance_overlay,
     },
@@ -106,6 +106,7 @@ pub fn run() {
             // file ops
             read_text_file,
             write_text_file,
+            write_binary_file,
             stat_file,
             // crypto
             hash_file,

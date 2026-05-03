@@ -101,6 +101,44 @@ pub async fn write_text_file(path: String, content: String) -> Result<(), String
     Ok(())
 }
 
+/// Write arbitrary bytes to a user-chosen path. Used by tools that
+/// produce binary output (e.g., generated PDFs from markdown-pdf) and
+/// need to persist it to a path obtained via the Save dialog.
+///
+/// Same path-safety rules as `write_text_file`:
+///   - parent directory must exist (no implicit `create_dir_all`)
+///   - target may not be a symlink (refuse rather than clobber)
+///   - same 100 MB cap
+///   - validator canonicalizes the parent and rejects forbidden prefixes
+#[tauri::command]
+pub async fn write_binary_file(path: String, content: Vec<u8>) -> Result<(), String> {
+    let p = validate_writable_file_path(&path)?;
+
+    if content.len() > MAX_WRITE_BYTES {
+        return Err(format!(
+            "content exceeds max write size of {} bytes",
+            MAX_WRITE_BYTES
+        ));
+    }
+
+    if let Ok(meta) = fs::symlink_metadata(&p).await {
+        if meta.file_type().is_symlink() {
+            return Err("path is not allowed".to_string());
+        }
+    }
+
+    let mut f = fs::File::create(&p)
+        .await
+        .map_err(|e| format!("failed to create file: {e}"))?;
+    f.write_all(&content)
+        .await
+        .map_err(|e| format!("failed to write file: {e}"))?;
+    f.flush()
+        .await
+        .map_err(|e| format!("failed to flush file: {e}"))?;
+    Ok(())
+}
+
 #[cfg(all(test, unix))]
 mod tests {
     use super::*;

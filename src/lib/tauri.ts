@@ -56,6 +56,11 @@ export const readTextFile = (path: string): Promise<string> =>
 export const writeTextFile = (path: string, content: string): Promise<void> =>
   invoke<void>('write_text_file', { path, content });
 
+/** Write arbitrary bytes to a user-chosen path. The Rust handler enforces
+ *  the same path validation + 100 MB cap as `writeTextFile`. */
+export const writeBinaryFile = (path: string, content: Uint8Array): Promise<void> =>
+  invoke<void>('write_binary_file', { path, content: Array.from(content) });
+
 export const statFile = (path: string): Promise<number> =>
   invoke<number>('stat_file', { path });
 
