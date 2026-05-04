@@ -5,13 +5,32 @@
  * before this revision) so the saved PDF matches the on-screen render
  * the user has been editing against.
  *
- * Default fonts are React-PDF's built-in Helvetica + Courier; no font
- * file fetch happens at export time, which keeps the first-export
- * latency low and avoids a network dependency that would violate the
- * local-first invariant.
+ * Body text uses React-PDF's built-in Helvetica (PostScript Standard 14
+ * — no font file shipped). Code text uses **JetBrains Mono** (SIL OFL,
+ * vendored under src/assets/fonts) because the built-in Courier only
+ * covers Latin-1 — box-drawing glyphs, arrows, em-dashes, and other
+ * Unicode characters that often appear in code blocks and ASCII
+ * diagrams render as substitution fallback (¼) under Courier. JetBrains
+ * Mono ships full Unicode coverage including U+2500 box-drawing,
+ * U+2190 arrows, and the common typography glyphs.
+ *
+ * The TTFs are bundled at build time via Vite's `?url` import suffix —
+ * no network fetch at export time, so local-first invariant holds.
  */
 
-import { StyleSheet } from '@react-pdf/renderer';
+import { StyleSheet, Font } from '@react-pdf/renderer';
+import jetbrainsMonoRegularUrl from '@/assets/fonts/JetBrainsMono-Regular.ttf?url';
+import jetbrainsMonoBoldUrl from '@/assets/fonts/JetBrainsMono-Bold.ttf?url';
+
+// Register once on module import. React-PDF's Font.register is
+// idempotent, so re-registration on HMR is safe.
+Font.register({
+  family: 'JetBrainsMono',
+  fonts: [
+    { src: jetbrainsMonoRegularUrl, fontWeight: 'normal' },
+    { src: jetbrainsMonoBoldUrl, fontWeight: 'bold' },
+  ],
+});
 
 export const styles = StyleSheet.create({
   page: {
@@ -96,7 +115,7 @@ export const styles = StyleSheet.create({
 
   // ─── Code ───────────────────────────────────────────────────────────
   codeInline: {
-    fontFamily: 'Courier',
+    fontFamily: 'JetBrainsMono',
     fontSize: 10,
     backgroundColor: '#f4f4f4',
     paddingLeft: 3,
@@ -106,7 +125,7 @@ export const styles = StyleSheet.create({
     borderRadius: 2,
   },
   codeBlock: {
-    fontFamily: 'Courier',
+    fontFamily: 'JetBrainsMono',
     fontSize: 9.5,
     backgroundColor: '#f6f8fa',
     color: '#1a1a1a',
