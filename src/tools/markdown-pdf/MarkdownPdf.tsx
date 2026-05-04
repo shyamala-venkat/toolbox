@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
-import { jsPDF } from 'jspdf';
+import { pdf } from '@react-pdf/renderer';
 import { save } from '@tauri-apps/plugin-dialog';
 import { ToolPage } from '@/components/tool/ToolPage';
 import { Textarea } from '@/components/ui/Textarea';
@@ -11,142 +11,13 @@ import { CopyButton } from '@/components/ui/CopyButton';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useAppStore } from '@/stores/appStore';
 import { writeBinaryFile } from '@/lib/tauri';
+import { MarkdownPdfDocument } from './MarkdownPdfDocument';
+import { tokenizeForPdf } from './markdownToPdfTokens';
 import { meta } from './meta';
 
 // ─── Markdown config ────────────────────────────────────────────────────────
 
 marked.setOptions({ gfm: true, breaks: true });
-
-// ─── Print CSS ──────────────────────────────────────────────────────────────
-
-/**
- * Embedded print-optimized stylesheet injected into the hidden iframe for
- * PDF export via window.print(). Designed for A4 pages with professional
- * typography, proper code blocks, and clean table rendering.
- */
-const PRINT_CSS = `
-@page {
-  size: A4;
-  margin: 2cm 2.5cm;
-}
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  font-size: 12pt;
-  line-height: 1.6;
-  color: #1a1a1a;
-  -webkit-print-color-adjust: exact;
-  print-color-adjust: exact;
-}
-
-h1 { font-size: 24pt; margin: 0 0 12pt 0; font-weight: 700; border-bottom: 1px solid #e0e0e0; padding-bottom: 6pt; }
-h2 { font-size: 18pt; margin: 18pt 0 8pt 0; font-weight: 600; border-bottom: 1px solid #e0e0e0; padding-bottom: 4pt; }
-h3 { font-size: 14pt; margin: 14pt 0 6pt 0; font-weight: 600; }
-h4 { font-size: 12pt; margin: 12pt 0 4pt 0; font-weight: 600; }
-h5 { font-size: 11pt; margin: 10pt 0 4pt 0; font-weight: 600; }
-h6 { font-size: 10pt; margin: 10pt 0 4pt 0; font-weight: 600; color: #555; }
-
-p { margin: 0 0 8pt 0; }
-
-a { color: #2563eb; text-decoration: underline; }
-
-ul, ol { margin: 0 0 8pt 20pt; padding: 0; }
-li { margin-bottom: 2pt; }
-
-blockquote {
-  margin: 8pt 0;
-  padding: 6pt 12pt;
-  border-left: 3pt solid #d0d0d0;
-  color: #555;
-  font-style: italic;
-}
-
-pre {
-  margin: 8pt 0;
-  padding: 10pt 12pt;
-  background: #f5f5f5;
-  border: 1px solid #e0e0e0;
-  border-radius: 4pt;
-  overflow-x: auto;
-  font-size: 9pt;
-  line-height: 1.5;
-}
-
-code {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 9pt;
-}
-
-p code, li code, td code {
-  padding: 1pt 4pt;
-  background: #f0f0f0;
-  border: 1px solid #e0e0e0;
-  border-radius: 3pt;
-}
-
-pre code {
-  padding: 0;
-  background: none;
-  border: none;
-  border-radius: 0;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 8pt 0;
-  font-size: 10pt;
-}
-
-th, td {
-  border: 1px solid #d0d0d0;
-  padding: 6pt 8pt;
-  text-align: left;
-}
-
-th {
-  background: #f5f5f5;
-  font-weight: 600;
-}
-
-tr:nth-child(even) {
-  background: #fafafa;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid #e0e0e0;
-  margin: 12pt 0;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-}
-
-/* Task lists */
-input[type="checkbox"] {
-  margin-right: 4pt;
-}
-
-/* Strikethrough */
-del { color: #999; }
-
-/* Avoid page breaks inside these elements */
-pre, blockquote, table, ul, ol {
-  page-break-inside: avoid;
-}
-
-h1, h2, h3, h4, h5, h6 {
-  page-break-after: avoid;
-}
-`;
 
 // ─── Placeholder ────────────────────────────────────────────────────────────
 
@@ -190,49 +61,25 @@ function MarkdownPdf() {
 
   // ─── Export handler ───────────────────────────────────────────────────
   //
-  // The previous implementation used `iframe.contentWindow.print()` and
-  // relied on the OS print dialog's "Save as PDF" button. That flow is
-  // unreliable inside a Tauri webview (window.print() may not surface a
-  // dialog at all on macOS) and gives the user no control over the file
-  // name or location.
+  // Pipeline:
+  //   1. Tokenize the markdown via marked.lexer().
+  //   2. Render those tokens to a React-PDF <Document> (vector text).
+  //   3. Generate a PDF blob via @react-pdf/renderer's `pdf()` helper.
+  //   4. Show a Tauri Save dialog → user picks the destination.
+  //   5. Write the bytes via the `write_binary_file` Rust IPC (path-
+  //      validated, 100 MB cap, refuses symlinks).
   //
-  // New flow:
-  //   1. Render the sanitized HTML offscreen in a real DOM node so jsPDF
-  //      can rasterize it via html2canvas. (The hidden div is removed
-  //      whether the export succeeds or fails.)
-  //   2. Generate a PDF blob with jsPDF's `.html()` method (A4, 16 mm
-  //      margins, automatic page breaks).
-  //   3. Show a Save dialog so the user picks the destination.
-  //   4. Write the bytes to that path via the new `write_binary_file`
-  //      Rust IPC (path-validated, 100 MB cap, refuses symlinks).
-  //
-  // Output is image-based (canvas-rasterized), so the PDF is not text-
-  // searchable. The trade-off is reliable rendering of every markdown
-  // construct (lists, code blocks, tables, blockquotes) without writing
-  // a custom token walker. We can swap in a token-walked, text-based
-  // renderer in a later pass if searchability becomes a real ask.
+  // Output is searchable vector text — Cmd-F finds words inside the
+  // saved PDF, scaling looks crisp on Retina, and file size stays
+  // proportional to content rather than rasterization DPI.
 
   const handleExportPdf = useCallback(async () => {
-    if (sanitizedHtml.length === 0) {
+    if (input.trim().length === 0) {
       showToast('Nothing to export. Enter some Markdown first.', 'warning');
       return;
     }
 
     setExporting(true);
-
-    // Build the offscreen render target. Width matches the inside-margin
-    // width of an A4 page at 96 DPI: (210 mm − 2×16 mm) × 3.78 px/mm.
-    const RENDER_WIDTH_PX = 670;
-    const host = document.createElement('div');
-    host.setAttribute('aria-hidden', 'true');
-    host.style.position = 'fixed';
-    host.style.left = '-99999px';
-    host.style.top = '0';
-    host.style.width = `${RENDER_WIDTH_PX}px`;
-    host.style.padding = '0';
-    host.style.background = '#ffffff';
-    host.innerHTML = `<style>${PRINT_CSS}</style><div class="md-export-body">${sanitizedHtml}</div>`;
-    document.body.appendChild(host);
 
     try {
       const target = await save({
@@ -245,28 +92,9 @@ function MarkdownPdf() {
         return;
       }
 
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true,
-      });
-
-      // jsPDF.html returns a thenable; awaiting it resolves once
-      // rendering and pagination are complete.
-      await doc.html(host, {
-        x: 16,
-        y: 16,
-        width: 178, // 210 mm - 2*16 mm
-        windowWidth: RENDER_WIDTH_PX,
-        margin: [16, 16, 16, 16],
-        autoPaging: 'text',
-      });
-
-      // `output('arraybuffer')` returns the binary PDF; convert to a
-      // typed array so the Tauri IPC can serialize it.
-      const ab = doc.output('arraybuffer') as ArrayBuffer;
-      const bytes = new Uint8Array(ab);
+      const tokens = tokenizeForPdf(input);
+      const blob = await pdf(<MarkdownPdfDocument tokens={tokens} />).toBlob();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
       await writeBinaryFile(target, bytes);
 
       showToast('Saved PDF', 'success');
@@ -274,10 +102,9 @@ function MarkdownPdf() {
       const msg = err instanceof Error ? err.message : String(err);
       showToast(`Export failed: ${msg}`, 'error');
     } finally {
-      if (host.parentNode) host.parentNode.removeChild(host);
       setExporting(false);
     }
-  }, [sanitizedHtml, showToast]);
+  }, [input, showToast]);
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
